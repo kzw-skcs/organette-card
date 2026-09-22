@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>オルガニート カード工房</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#5a2a35">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="カード工房">
+<link rel="apple-touch-icon" href="icon-180.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root{
+  --pri:#b0485f; --pri-d:#5a2a35; --pri-l:#f6dde3;
+  --bg:#fbf7f2; --card:#ffffff; --ink:#2b2226; --mute:#7a6d72; --line:#e6dcd6;
+  --ok:#2f7d5b; --warn:#d9822b; --err:#c0392b;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;font-size:15px}
+header{position:sticky;top:0;z-index:20;background:var(--pri-d);color:#fff;padding:calc(env(safe-area-inset-top,0) + 10px) 12px 10px;display:flex;align-items:center;gap:8px}
+header h1{font-size:17px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header button{background:rgba(255,255,255,.14);color:#fff;border:0;border-radius:8px;padding:8px 10px;font-size:13px;min-height:36px}
+main{padding:12px 12px calc(84px + env(safe-area-inset-bottom,0));max-width:760px;margin:0 auto}
+nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom,0);z-index:20}
+nav button{flex:1;border:0;background:none;padding:8px 0 6px;font-size:11px;color:var(--mute);min-height:56px;display:flex;flex-direction:column;align-items:center;gap:2px}
+nav button .i{font-size:21px}
+nav button.on{color:var(--pri);font-weight:700}
+.tab{display:none}.tab.on{display:block}
+.box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.box h2{font-size:15px;margin:0 0 10px;color:var(--pri-d)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:10px;padding:10px 14px;min-height:44px;font-size:14px;font-weight:600;background:var(--pri);color:#fff;cursor:pointer}
+.btn.sub{background:var(--pri-l);color:var(--pri-d)}
+.btn.ghost{background:#fff;color:var(--pri-d);border:1px solid var(--line)}
+.btn.danger{background:#fbe3e0;color:var(--err)}
+.btn:disabled{opacity:.45}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.grow{flex:1}
+label.f{display:block;font-size:12px;color:var(--mute);margin:10px 0 4px}
+input[type=text],input[type=password],input[type=number],select,textarea{width:100%;font-size:16px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink)}
+textarea{min-height:130px;font-family:ui-monospace,Menlo,monospace;font-size:14px}
+.song{display:flex;align-items:center;gap:10px;padding:12px 4px;border-bottom:1px solid var(--line)}
+.song:last-child{border-bottom:0}
+.song .t{flex:1;min-width:0}
+.song .t b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.song .t small{color:var(--mute)}
+.pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;background:var(--pri-l);color:var(--pri-d);margin-left:4px}
+.muted{color:var(--mute);font-size:13px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0}
+.stat{background:var(--bg);border-radius:10px;padding:8px;text-align:center}
+.stat b{display:block;font-size:17px}
+.stat small{font-size:11px;color:var(--mute)}
+.warn{color:var(--warn)} .err{color:var(--err)}
+#editorWrap{background:#efe8e2;border-radius:12px;padding:10px 0;overflow:auto;max-height:calc(100vh - 290px);position:relative;touch-action:pan-y}
+#editorWrap svg{display:block;margin:0 auto;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.15)}
+.toolbar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.toolbar .btn{padding:8px 10px;font-size:13px;min-height:40px}
+.pages{display:flex;gap:10px;overflow-x:auto;padding:6px 0}
+.pages svg{flex:none;background:#fff;box-shadow:0 1px 5px rgba(0,0,0,.2)}
+.modal{position:fixed;inset:0;background:rgba(30,15,20,.55);z-index:50;display:none;align-items:flex-end;justify-content:center}
+.modal.on{display:flex}
+.sheet{background:var(--bg);width:100%;max-width:760px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:16px 14px calc(16px + env(safe-area-inset-bottom,0))}
+.sheet h2{margin:0 0 8px;font-size:17px;color:var(--pri-d)}
+.trk{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px solid var(--line)}
+.trk input{width:22px;height:22px}
+#lock{position:fixed;inset:0;background:linear-gradient(160deg,#5a2a35,#b0485f);z-index:100;display:flex;align-items:center;justify-content:center;padding:24px}
+#lock .lk{background:#fff;border-radius:18px;padding:22px;width:100%;max-width:360px;text-align:center}
+#lock h2{margin:6px 0 4px;color:var(--pri-d)}
+#lock input{margin-top:10px;text-align:center}
+#toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#2b2226;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;opacity:0;transition:.25s;z-index:200;pointer-events:none;max-width:90%}
+#toast.on{opacity:.95}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--mute);margin-top:8px}
+.legend span{display:inline-flex;align-items:center;gap:4px}
+.dot{width:10px;height:10px;border-radius:50%;background:#111;display:inline-block}
+.dot.o{background:#fff;border:1.5px dashed #111}
+.dot.r{background:#111;box-shadow:0 0 0 2px #e74c3c}
+ol.steps{padding-left:20px;margin:6px 0;line-height:1.7;font-size:14px}
+code{background:#f1e9e4;padding:1px 5px;border-radius:5px;font-size:13px}
+</style>
+</head>
+<body>
+
+<div id="lock">
+  <div class="lk">
+    <div style="font-size:40px">🎼</div>
+    <h2 id="lkTitle">オルガニート カード工房</h2>
+    <p class="muted" id="lkMsg"></p>
+    <input type="password" id="pw1" placeholder="パスワード" autocomplete="current-password">
+    <input type="password" id="pw2" placeholder="パスワード（確認）" style="display:none" autocomplete="new-password">
+    <button class="btn" id="lkBtn" style="width:100%;margin-top:14px">開く</button>
+    <p class="err" id="lkErr" style="font-size:13px;min-height:18px"></p>
+    <button class="btn ghost" id="lkReset" style="display:none;font-size:12px;min-height:36px">パスワードを忘れた（データ初期化）</button>
+  </div>
+</div>
+
+<header>
+  <h1>🎼 オルガニート カード工房</h1>
+  <button onclick="lockNow()">🔒</button>
+  <button onclick="updateApp()">🔄 更新</button>
+</header>
+
+<main>
+  <!-- ライブラリ -->
+  <section class="tab on" id="tab-lib">
+    <div class="box">
+      <h2>新しいカードを作る</h2>
+      <div class="row">
+        <label class="btn grow" style="position:relative">🎹 MIDIを読み込む
+          <input type="file" id="midiFile" accept=".mid,.midi,audio/midi,audio/x-midi" style="position:absolute;inset:0;opacity:0">
+        </label>
+        <button class="btn sub grow" onclick="openText()">⌨️ ドレミで入力</button>
+        <button class="btn ghost grow" onclick="newBlank()">▦ 白紙から</button>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn sub grow" onclick="showTab('scan')">📷 楽譜をスキャン（PDF・写真 → MIDI／カード）</button>
+      </div>
+      <p class="muted" style="margin:10px 0 0">曲は20弁（ド〜ラの白鍵20音）に合わせて自動で移調します。読み込んだ曲はこの端末の中だけに暗号化して保存され、外部には送信されません。</p>
+    </div>
+    <div class="box">
+      <h2>マイライブラリ <span class="pill" id="libCount">0</span></h2>
+      <div id="libList"></div>
+    </div>
+    <div class="box">
+      <h2>収録曲（著作権が切れた曲）</h2>
+      <div id="pdList"></div>
+    </div>
+  </section>
+
+  <!-- 編集 -->
+  <section class="tab" id="tab-edit">
+    <div class="box" style="padding:10px">
+      <div class="row" style="margin-bottom:8px">
+        <input type="text" id="edTitle" class="grow" placeholder="曲名" style="flex:1">
+        <button class="btn" onclick="saveSong()">💾 保存</button>
+      </div>
+      <div class="toolbar">
+        <button class="btn sub" id="playBtn" onclick="togglePlay()">▶ 試聴</button>
+        <button class="btn ghost" onclick="undo()">↶ 戻す</button>
+        <button class="btn ghost" onclick="shiftAll(1)">⬆ 全体を1音上へ</button>
+        <button class="btn ghost" onclick="shiftAll(-1)">⬇ 1音下へ</button>
+        <button class="btn ghost" onclick="addBars(4)">＋4小節</button>
+        <button class="btn ghost" onclick="trimBars()">末尾を詰める</button>
+        <button class="btn ghost" id="reArrBtn" onclick="reArrange()">🎛 再アレンジ</button>
+        <button class="btn ghost" onclick="gotoPrint()">🖨 印刷へ</button>
+      </div>
+      <div class="row muted" style="font-size:12px;margin-bottom:6px">
+        <span>テンポ</span><input type="range" id="bpm" min="40" max="200" value="90" class="grow"><b id="bpmV">90</b>
+        <span>拡大</span><input type="range" id="zoom" min="3" max="9" step="0.5" value="5" style="width:80px">
+      </div>
+      <div id="edStats" class="muted" style="font-size:12px;margin-bottom:6px"></div>
+      <div id="editorWrap"><div id="editor"></div></div>
+      <div class="legend"><span><i class="dot"></i>穴</span><span><i class="dot r"></i>同音の連打が近すぎる</span><span>タップで穴を追加・削除</span></div>
+    </div>
+  </section>
+
+  <!-- 印刷 -->
+  <section class="tab" id="tab-print">
+    <div class="box">
+      <h2>印刷用PDFを作る</h2>
+      <label class="f">曲</label>
+      <select id="prSong"></select>
+      <div class="row">
+        <div class="grow"><label class="f">用紙</label>
+          <select id="prPaper"><option value="a4">A4（2列）</option><option value="long">長尺（幅210mm×長さ自由・2列）</option><option value="a3">A3（3列）</option></select></div>
+        <div class="grow"><label class="f">穴の印</label>
+          <select id="prHole"><option value="fill">黒丸（型紙向け）</option><option value="cross">十字＋円（位置合わせ向け）</option></select></div>
+      </div>
+      <div id="prLenBox" style="display:none"><label class="f">長尺の長さ（mm）　<span class="muted">PIXUS TR150はユーザー定義で最大676mm</span></label><input type="number" id="prLen" value="676" min="300" max="1200" inputmode="numeric"></div>
+      <div id="prInfo" class="muted" style="margin-top:10px"></div>
+      <div class="pages" id="prPages"></div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn grow" onclick="makePdf()">📄 PDFを作成</button>
+      </div>
+    </div>
+    <div class="box">
+      <h2>印刷と組み立て</h2>
+      <ol class="steps">
+        <li>印刷の倍率は必ず <b>100%（実際のサイズ）</b>にします。「用紙に合わせる」はオフにしてください。</li>
+        <li>1ページ目の<b>100mm定規</b>を実際の定規で測り、ずれていないか確認します。</li>
+        <li>長尺で印刷するときは、プリンター側でも同じ寸法のユーザー定義用紙を選び、後トレイに1枚ずつ差し込みます。</li>
+        <li>紙は厚さ<b>0.17〜0.22mm</b>（例：コクヨ 両面厚紙マット紙 LBP-F31）。普通紙に印刷して型紙にし、作曲用カードに重ねて穴を開ける方法も確実です。</li>
+        <li>外枠の線に沿って、金属定規とカッターでまっすぐ切り出します（幅70mm）。</li>
+        <li>点線の丸（つなぎ目から10mm以内）は<b>まだ開けません</b>。番号順に突き合わせ、裏からテープで留めてから、テープの上から開けます。</li>
+        <li>穴は<b>直径2mm</b>のパンチで開けます。</li>
+        <li>矢印の側から差し込みます。</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 楽譜スキャン -->
+  <section class="tab" id="tab-scan">
+    <div class="box">
+      <h2>📷 楽譜をスキャン（半自動）</h2>
+      <p class="muted" style="margin-top:0">印刷された楽譜のPDFや写真から、五線・小節線・音符を読み取ります。解析はこの端末の中だけで行います。</p>
+      <label class="btn ghost" style="position:relative;width:100%">📄 PDF・画像を選ぶ
+        <input type="file" id="scFile" accept="application/pdf,.pdf,image/*" style="position:absolute;inset:0;opacity:0"></label>
+      <div class="muted" id="scFileName" style="margin-top:6px;font-size:13px"></div>
+      <div class="row">
+        <div class="grow"><label class="f">楽譜の種類</label>
+          <select id="scMode"><option value="piano">ピアノ（大譜表：ト音＋ヘ音）</option><option value="treble">1段（ト音記号）</option><option value="bass">1段（ヘ音記号）</option></select></div>
+        <div class="grow"><label class="f">調号</label>
+          <select id="scKey">
+            <option value="0">なし（ハ長調・イ短調）</option>
+            <option value="1">♯1（ト長調・ホ短調）</option><option value="2">♯2（ニ長調・ロ短調）</option><option value="3">♯3（イ長調・嬰ヘ短調）</option><option value="4">♯4（ホ長調・嬰ハ短調）</option><option value="5">♯5（ロ長調）</option><option value="6">♯6（嬰ヘ長調）</option><option value="7">♯7（嬰ハ長調）</option>
+            <option value="-1">♭1（ヘ長調・ニ短調）</option><option value="-2">♭2（変ロ長調・ト短調）</option><option value="-3">♭3（変ホ長調・ハ短調）</option><option value="-4">♭4（変イ長調・ヘ短調）</option><option value="-5">♭5（変ニ長調）</option><option value="-6">♭6（変ト長調）</option><option value="-7">♭7（変ハ長調）</option>
+          </select></div>
+      </div>
+      <div class="row">
+        <div class="grow"><label class="f">拍子</label><select id="scBeats"><option value="2">2/4</option><option value="3">3/4</option><option value="4" selected>4/4</option></select></div>
+        <div class="grow"><label class="f">リズムの細かさ</label><select id="scQ"><option value="0.5">8分音符まで</option><option value="0.25">16分音符まで</option></select></div>
+        <div class="grow"><label class="f">テンポ</label><input type="number" id="scBpm" value="90" inputmode="numeric"></div>
+      </div>
+      <label class="f">曲名</label><input type="text" id="scTitle" placeholder="（ファイル名を使います）">
+      <button class="btn" id="scRun" onclick="scanRun()" disabled style="width:100%;margin-top:12px">🔍 解析する</button>
+      <p class="muted" id="scProg" style="font-size:13px;margin:8px 0 0"></p>
+    </div>
+    <div class="box" id="scResult" style="display:none;padding:10px">
+      <div class="stats" id="scStats"></div>
+      <div class="toolbar">
+        <button class="btn scModeBtn" data-m="note" onclick="scanSetMode('note')">● 音符を追加・削除</button>
+        <button class="btn sub scModeBtn" data-m="bar" onclick="scanSetMode('bar')">｜ 小節線を追加・削除</button>
+      </div>
+      <div class="row" style="justify-content:space-between;margin-bottom:6px">
+        <button class="btn ghost" onclick="scanPage(-1)">◀</button><b id="scPageNo"></b><button class="btn ghost" onclick="scanPage(1)">▶</button>
+      </div>
+      <div class="row muted" style="font-size:12px;margin-bottom:6px"><span>拡大</span><input type="range" id="scZoom" min="1" max="5" step="0.5" value="2.5" class="grow"></div>
+      <div id="scWrap" style="overflow:auto;max-height:70vh;border:1px solid var(--line);border-radius:8px;background:#fff">
+        <div id="scView" style="position:relative;width:250%"></div>
+      </div>
+      <div class="legend"><span style="color:#e03131">● 右手（ト音）</span><span style="color:#1971c2">● 左手（ヘ音）</span><span style="color:#2f9e44">｜ 小節線</span><span>音符モード：丸をタップで削除、何もない所をタップで追加</span></div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn sub grow" onclick="scanPlay()">▶ 試聴</button>
+        <button class="btn ghost grow" onclick="stopPlay()">■ 停止</button>
+        <button class="btn ghost grow" onclick="scanMidi()">🎵 MIDIで保存</button>
+        <button class="btn grow" onclick="scanToCard()">🎼 カードにする</button>
+      </div>
+    </div>
+    <div class="box">
+      <h2>うまく読み取るコツ</h2>
+      <ol class="steps">
+        <li>iPhoneの「メモ」や「ファイル」アプリの<b>書類をスキャン</b>を使うと、まっすぐで影のないPDFになります。</li>
+        <li>1ページに楽譜1枚、300dpi程度が目安です。手書きの楽譜には対応していません。</li>
+        <li><b>調号</b>と<b>拍子</b>は自動では判定しないので、楽譜を見て選んでください。</li>
+        <li>曲の途中の臨時記号（♯・♭・♮）、休符、タイ、装飾音は読み取りません。カードの編集画面で直せます。</li>
+        <li>リズムは小節の中の音符の間隔から推定しています。試聴してずれていたら、カードの編集画面で直してください。</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 設定 -->
+  <section class="tab" id="tab-set">
+    <div class="box">
+      <h2>カードの寸法</h2>
+      <p class="muted">実物のカードを測った値が初期値です。仕上がりがずれる場合だけ調整してください。</p>
+      <div class="row">
+        <div class="grow"><label class="f">四分音符の長さ（mm）</label><input type="number" id="sBeat" step="0.05" inputmode="decimal"></div>
+        <div class="grow"><label class="f">弁の間隔（mm）</label><input type="number" id="sPitch" step="0.01" inputmode="decimal"></div>
+      </div>
+      <div class="row">
+        <div class="grow"><label class="f">カード端〜低いドの線（mm）</label><input type="number" id="sMargin" step="0.05" inputmode="decimal"></div>
+        <div class="grow"><label class="f">連打の警告（同音の間隔がこれ未満、mm）</label><input type="number" id="sWarn" step="0.05" inputmode="decimal"></div>
+      </div>
+      <label class="f">編集時のマス目</label>
+      <select id="sSnap"><option value="2">8分音符（3.75mm）</option><option value="1">16分音符（1.875mm）</option></select>
+      <div class="row" style="margin-top:12px"><button class="btn" onclick="saveSettings()">設定を保存</button><button class="btn ghost" onclick="resetSettings()">初期値に戻す</button></div>
+    </div>
+    <div class="box">
+      <h2>バックアップ</h2>
+      <p class="muted">ライブラリを暗号化されたファイルとして書き出せます。読み込むときは、書き出したときのパスワードが必要です。</p>
+      <div class="row">
+        <button class="btn sub grow" onclick="exportBackup()">⬇ 書き出す</button>
+        <label class="btn ghost grow" style="position:relative">⬆ 読み込む<input type="file" id="bkFile" accept=".json,application/json" style="position:absolute;inset:0;opacity:0"></label>
+      </div>
+    </div>
+    <div class="box">
+      <h2>パスワード</h2>
+      <label class="f">新しいパスワード</label><input type="password" id="npw1" autocomplete="new-password">
+      <label class="f">確認</label><input type="password" id="npw2" autocomplete="new-password">
+      <div class="row" style="margin-top:10px"><button class="btn" onclick="changePw()">変更</button></div>
+      <p class="muted">パスワードを忘れると、ライブラリは復元できません。</p>
+    </div>
+    <div class="box muted" style="font-size:12px">
+      20弁：ド〜ラ（白鍵のみ）／カード幅70mm／弁の間隔3.0mm／四分音符7.5mm／穴径2mm<br>
+      オルガニート カード工房 v1.1 — 個人利用専用
+    </div>
+  </section>
+</main>
+
+<nav>
+  <button class="on" data-tab="lib"><span class="i">📚</span>ライブラリ</button>
+  <button data-tab="edit"><span class="i">✏️</span>編集</button>
+  <button data-tab="print"><span class="i">🖨</span>印刷</button>
+  <button data-tab="set"><span class="i">⚙️</span>設定</button>
+</nav>
+
+<!-- 取り込みダイアログ -->
+<div class="modal" id="impDlg">
+  <div class="sheet">
+    <h2 id="impTitle">曲を取り込む</h2>
+    <label class="f">曲名</label><input type="text" id="impName">
+    <div id="impTracksBox">
+      <label class="f">使うトラック（メロディと伴奏を選びます）</label>
+      <div id="impTracks"></div>
+    </div>
+    <div id="impTextBox" style="display:none">
+      <label class="f">ドレミ入力　<span class="muted">例：<code>ド レ ミ:2</code>（:の後ろは拍数）、<code>ド+ミ+ソ</code>＝和音、<code>-:1</code>＝休符、<code>^</code>＝1オクターブ上、<code>_</code>＝下、<code>---</code>の行で別の声部</span></label>
+      <textarea id="impText" placeholder="ド ド ソ ソ ラ ラ ソ:2&#10;ファ ファ ミ ミ レ レ ド:2"></textarea>
+    </div>
+    <div class="row">
+      <div class="grow"><label class="f">移調</label><select id="impShift"></select></div>
+      <div class="grow"><label class="f">♯・♭の音（半音）</label>
+        <select id="impBlack"><option value="down">半音下の白鍵へ</option><option value="up">半音上の白鍵へ</option><option value="drop">削除する</option></select></div>
+    </div>
+    <div class="row">
+      <div class="grow"><label class="f">音域の外の音</label>
+        <select id="impRange"><option value="fold">オクターブを移して入れる</option><option value="drop">削除する</option></select></div>
+      <div class="grow"><label class="f">リズムの細かさ</label>
+        <select id="impQ"><option value="2">8分音符まで</option><option value="1">16分音符まで</option></select></div>
+    </div>
+    <div class="row">
+      <div class="grow"><label class="f">同時に鳴らす音の上限</label>
+        <select id="impChord"><option value="1">1音（メロディだけ）</option><option value="2">2音</option><option value="3" selected>3音</option><option value="4">4音</option><option value="20">制限なし</option></select></div>
+      <div class="grow"><label class="f">テンポの目安（BPM）</label><input type="number" id="impBpm" inputmode="numeric"></div>
+      <div style="width:90px"><label class="f">拍子</label><select id="impBeats"><option value="2">2/4</option><option value="3">3/4</option><option value="4">4/4</option></select></div>
+    </div>
+    <div class="stats" id="impStats"></div>
+    <div id="impMsg" class="muted" style="font-size:13px"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn ghost grow" onclick="closeImp()">キャンセル</button>
+      <button class="btn sub grow" onclick="previewImp()">▶ 試聴</button>
+      <button class="btn grow" onclick="commitImp()">カードにする</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+/* ================= 定数・設定 ================= */
+const LANES = 20, P0 = 48, WHITE = [0,2,4,5,7,9,11];
+const KANA = ['ド','レ','ミ','ファ','ソ','ラ','シ'];
+const STAFF = new Set([1,3,5,9,11,13,15,17]); // ヘ音記号:レファラ / ト音記号:ミソシレファ
+const MIDC = 7;                                // 中央のド
+const TPQ = 4;                                 // 四分音符あたりのtick（16分音符=1tick）
+const CARDW = 70, HOLE_R = 1.0, LEAD = 30, TAIL = 20, JOIN_SAFE = 10;
+const DEF = {beatMm:7.5, pitchMm:3.0, marginMm:6.5, warnMm:3.75, snap:2};
+let S = Object.assign({}, DEF);
+try { Object.assign(S, JSON.parse(localStorage.getItem('oc_settings')||'{}')); } catch(e){}
+const gridMm = () => S.beatMm / TPQ;
+const laneX = i => S.marginMm + i * S.pitchMm;
+const laneMidi = i => P0 + Math.floor(i/7)*12 + WHITE[i%7];
+const laneName = i => KANA[i%7];
+function midiLane(p){ if(p<48||p>81) return -1; const k = WHITE.indexOf((p-48)%12); return k<0 ? -1 : Math.floor((p-48)/12)*7 + k; }
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('on'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('on'),2200); }
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+
+/* ================= 収録曲（パブリックドメイン） ================= */
+const PD = [
+  {title:'きらきら星', bpm:100, beats:4, text:
+`o5 ド ド ソ ソ ラ ラ ソ:2 ファ ファ ミ ミ レ レ ド:2
+ソ ソ ファ ファ ミ ミ レ:2 ソ ソ ファ ファ ミ ミ レ:2
+ド ド ソ ソ ラ ラ ソ:2 ファ ファ ミ ミ レ レ ド:2
+---
+o3 ド:2 ド:2 ファ:2 ド:2 ファ:2 ド:2 ソ:2 ド:2
+ド:2 ファ:2 ド:2 ソ:2 ド:2 ファ:2 ド:2 ソ:2
+ド:2 ド:2 ファ:2 ド:2 ファ:2 ド:2 ソ:2 ド:2`},
+  {title:'ハッピーバースデー・トゥー・ユー', bpm:100, beats:3, text:
+`o4 -:2 ソ:0.75 ソ:0.25 ラ ソ ド^ シ:2 ソ:0.75 ソ:0.25 ラ ソ レ^ ド^:2 ソ:0.75 ソ:0.25
+ソ^ ミ^ ド^ シ ラ ファ^:0.75 ファ^:0.25 ミ^ ド^ レ^ ド^:3
+---
+o3 -:3 ド:3 ソ:3 ソ:3 ド:3 ド:3 ファ:3 ド:2 ソ:1 ド:3`},
+  {title:'歓喜の歌（ベートーヴェン 第九）', bpm:110, beats:4, text:
+`o5 ミ ミ ファ ソ ソ ファ ミ レ ド ド レ ミ ミ:1.5 レ:0.5 レ:2
+ミ ミ ファ ソ ソ ファ ミ レ ド ド レ ミ レ:1.5 ド:0.5 ド:2
+レ レ ミ ド レ ミ:0.5 ファ:0.5 ミ ド レ ミ:0.5 ファ:0.5 ミ レ ド レ ソ_:2
+ミ ミ ファ ソ ソ ファ ミ レ ド ド レ ミ レ:1.5 ド:0.5 ド:2
+---
+o3 ド:4 ソ:4 ド:4 ソ:4 ド:4 ソ:4 ド:2 ソ:2 ド:4
+ソ:4 ソ:2 ド:2 ソ:4 ド:2 ソ:2 ド:4 ソ:4 ド:2 ソ:2 ド:4`},
+  {title:'かえるの合唱（輪唱）', bpm:100, beats:4, text:
+`o5 ド レ ミ ファ ミ レ ド:2 ミ ファ ソ ラ ソ ファ ミ:2
+ド:2 ド:2 ド:2 ド:2 ド:0.5 ド:0.5 レ:0.5 レ:0.5 ミ:0.5 ミ:0.5 ファ:0.5 ファ:0.5 ミ レ ド:2
+---
+o4 -:8 ド レ ミ ファ ミ レ ド:2 ミ ファ ソ ラ ソ ファ ミ:2
+ド:2 ド:2 ド:2 ド:2 ド:0.5 ド:0.5 レ:0.5 レ:0.5 ミ:0.5 ミ:0.5 ファ:0.5 ファ:0.5 ミ レ ド:2`}
+];
+
+/* ================= 暗号化ライブラリ ================= */
+const VKEY = 'oc_vault_v1';
+let cryptoKey = null, vault = {songs:[]};
+const b64 = u8 => btoa(String.fromCharCode(...new Uint8Array(u8)));
+const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function deriveKey(pw, salt){
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2', salt, iterations:200000, hash:'SHA-256'}, base, {name:'AES-GCM', length:256}, false, ['encrypt','decrypt']);
+}
+async function encryptObj(obj, key, salt){
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({name:'AES-GCM', iv}, key, new TextEncoder().encode(JSON.stringify(obj)));
+  return {v:1, salt:b64(salt), iv:b64(iv), ct:b64(ct)};
+}
+async function decryptObj(rec, key){
+  const pt = await crypto.subtle.decrypt({name:'AES-GCM', iv:unb64(rec.iv)}, key, unb64(rec.ct));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+let vaultSalt = null;
+async function saveVault(){
+  if(!cryptoKey) return;
+  const rec = await encryptObj(vault, cryptoKey, vaultSalt);
+  try { localStorage.setItem(VKEY, JSON.stringify(rec)); }
+  catch(e){ alert('保存容量が足りません。不要な曲を削除してください。'); }
+}
+function lockSetup(){
+  const has = !!localStorage.getItem(VKEY);
+  $('lock').style.display = 'flex';
+  $('pw1').value = ''; $('pw2').value = ''; $('lkErr').textContent = '';
+  $('pw2').style.display = has ? 'none' : 'block';
+  $('lkReset').style.display = has ? 'inline-flex' : 'none';
+  $('lkMsg').textContent = has ? 'パスワードを入力してください' : '最初にパスワードを決めてください。ライブラリはこのパスワードで暗号化されます。';
+  $('lkBtn').textContent = has ? '開く' : 'パスワードを設定して始める';
+  setTimeout(()=>$('pw1').focus(), 100);
+}
+async function lockSubmit(){
+  const pw = $('pw1').value, has = !!localStorage.getItem(VKEY);
+  if(pw.length < 4){ $('lkErr').textContent = '4文字以上にしてください'; return; }
+  $('lkBtn').disabled = true; $('lkErr').textContent = '';
+  try{
+    if(!has){
+      if(pw !== $('pw2').value){ $('lkErr').textContent = '確認用と一致しません'; return; }
+      vaultSalt = crypto.getRandomValues(new Uint8Array(16));
+      cryptoKey = await deriveKey(pw, vaultSalt);
+      vault = {songs:[]}; await saveVault();
+    } else {
+      const rec = JSON.parse(localStorage.getItem(VKEY));
+      vaultSalt = unb64(rec.salt);
+      const key = await deriveKey(pw, vaultSalt);
+      try { vault = await decryptObj(rec, key); } catch(e){ $('lkErr').textContent = 'パスワードが違います'; return; }
+      cryptoKey = key;
+    }
+    $('lock').style.display = 'none';
+    renderLib(); refreshPrintSongs();
+  } finally { $('lkBtn').disabled = false; }
+}
+function lockNow(){ stopPlay(); cryptoKey = null; vault = {songs:[]}; lockSetup(); }
+$('lkBtn').onclick = lockSubmit;
+$('pw1').onkeydown = $('pw2').onkeydown = e => { if(e.key==='Enter') lockSubmit(); };
+$('lkReset').onclick = () => {
+  if(confirm('保存した曲がすべて消えます。初期化しますか？') && confirm('本当に初期化しますか？元に戻せません。')){
+    localStorage.removeItem(VKEY); lockSetup();
+  }
+};
+let hiddenAt = 0;
+document.addEventListener('visibilitychange', () => {
+  if(document.hidden) hiddenAt = Date.now();
+  else if(cryptoKey && hiddenAt && Date.now()-hiddenAt > 10*60*1000) lockNow();
+});
+
+/* ================= MIDI解析 ================= */
+function decodeName(bytes){
+  try { return new TextDecoder('utf-8', {fatal:true}).decode(bytes); }
+  catch(e){ try { return new TextDecoder('shift_jis').decode(bytes); } catch(e2){ return ''; } }
+}
+function parseMidi(buf){
+  const d = new DataView(buf); let pos = 0;
+  const str = n => { let s=''; for(let i=0;i<n;i++) s += String.fromCharCode(d.getUint8(pos+i)); pos += n; return s; };
+  if(str(4) !== 'MThd') throw new Error('MIDIファイルではありません');
+  const hl = d.getUint32(pos); pos += 4;
+  const ntr = d.getUint16(pos+2), div = d.getUint16(pos+4); pos += hl;
+  if(div & 0x8000) throw new Error('SMPTE形式のMIDIには対応していません');
+  let tempo = null, ts = null; const groups = new Map();
+  for(let t=0; t<ntr && pos+8 <= d.byteLength; ){
+    const id = str(4); const len = d.getUint32(pos); pos += 4; const end = Math.min(pos+len, d.byteLength);
+    if(id !== 'MTrk'){ pos = end; continue; }
+    let tick = 0, rs = 0, name = '';
+    const vlq = () => { let v=0, b; do { b = d.getUint8(pos++); v = (v<<7) | (b&0x7f); } while(b & 0x80); return v; };
+    while(pos < end){
+      tick += vlq();
+      let st = d.getUint8(pos);
+      if(st < 0x80) st = rs; else { pos++; if(st < 0xF0) rs = st; }
+      if(st === 0xFF){
+        const type = d.getUint8(pos++); const l = vlq();
+        if(type === 3 && !name) name = decodeName(new Uint8Array(buf, pos, l));
+        if(type === 0x51 && tempo === null) tempo = (d.getUint8(pos)<<16)|(d.getUint8(pos+1)<<8)|d.getUint8(pos+2);
+        if(type === 0x58 && ts === null) ts = d.getUint8(pos);
+        pos += l;
+      } else if(st === 0xF0 || st === 0xF7){ pos += vlq(); }
+      else {
+        const hi = st & 0xF0, ch = st & 0x0F;
+        const a = d.getUint8(pos++); let b = 0;
+        if(hi !== 0xC0 && hi !== 0xD0) b = d.getUint8(pos++);
+        if(hi === 0x90 && b > 0 && ch !== 9){
+          const k = t + ':' + ch;
+          if(!groups.has(k)) groups.set(k, {key:k, name:'', ch, tr:t, notes:[]});
+          groups.get(k).notes.push({b: tick/div, p: a});
+        }
+      }
+    }
+    for(const g of groups.values()) if(g.tr === t && !g.name) g.name = name;
+    pos = end; t++;
+  }
+  const tracks = [...groups.values()].filter(g => g.notes.length).map((g,i) => {
+    const ps = g.notes.map(n=>n.p);
+    return {id:i, name:(g.name||'トラック'+(g.tr+1)) + ' / ch' + (g.ch+1), notes:g.notes, lo:Math.min(...ps), hi:Math.max(...ps)};
+  });
+  if(!tracks.length) throw new Error('音符が見つかりませんでした');
+  return {tracks, bpm: tempo ? Math.round(60000000/tempo) : null, beats: ts || 4};
+}
+
+/* ================= ドレミ入力の解析 ================= */
+const NAMEPC = {'ド':0,'レ':2,'ミ':4,'ファ':5,'ソ':7,'ラ':9,'シ':11,'C':0,'D':2,'E':4,'F':5,'G':7,'A':9,'B':11};
+function parseText(txt){
+  const voices = txt.split(/^\s*-{3,}\s*$/m); const notes = [];
+  for(const v of voices){
+    let b = 0, oct = 4;
+    const toks = v.replace(/[|｜]/g,' ').replace(/　/g,' ').split(/\s+/).filter(Boolean);
+    for(const tk of toks){
+      const om = tk.match(/^[oO](\d)$/); if(om){ oct = +om[1]; continue; }
+      const [ps, ds] = tk.split(/[:：]/);
+      const dur = ds === undefined ? 1 : parseFloat(ds);
+      if(!(dur > 0)) throw new Error('拍数が読めません: ' + tk);
+      if(ps !== '-' && ps !== '休' && ps !== 'R' && ps !== 'r'){
+        for(const one of ps.split('+')){
+          const m = one.match(/^(ファ|ド|レ|ミ|ソ|ラ|シ|[A-G])([#♯b♭]?)([\^_]*)(\d?)$/i);
+          if(!m) throw new Error('音名が読めません: ' + one);
+          const pc = NAMEPC[m[1].length===1 ? m[1].toUpperCase() : m[1]];
+          const acc = /[#♯]/.test(m[2]) ? 1 : (m[2] ? -1 : 0);
+          let o = m[4] ? +m[4] : oct;
+          for(const c of m[3]) o += c === '^' ? 1 : -1;
+          notes.push({b, p: 12*(o+1) + pc + acc});
+        }
+      }
+      b += dur;
+    }
+  }
+  if(!notes.length) throw new Error('音符がありません');
+  return notes;
+}
+
+/* ================= アレンジ（20弁へ変換） ================= */
+function scoreShift(ps, s){
+  let sc = 0;
+  for(const p0 of ps){ const p = p0 + s; const pc = ((p%12)+12)%12;
+    if(WHITE.indexOf(pc) < 0) sc -= 2; else sc += (p>=48 && p<=81) ? 2 : 1; }
+  return sc;
+}
+function autoShift(ps){
+  let best = 0, bs = -Infinity;
+  for(let s=-36; s<=36; s++){ const sc = scoreShift(ps, s) - Math.abs(s)*0.001; if(sc > bs){ bs = sc; best = s; } }
+  return best;
+}
+function arrange(src, o){
+  const shift = o.shift === 'auto' ? autoShift(src.map(n=>n.p)) : o.shift;
+  const st = {shift, black:0, folded:0, dropped:0, cut:0};
+  const m = new Map();
+  for(const n of src){
+    let p = n.p + shift;
+    if(WHITE.indexOf(((p%12)+12)%12) < 0){ st.black++; if(o.black==='drop'){ st.dropped++; continue; } p += o.black==='up' ? 1 : -1; }
+    if(p < 48 || p > 81){ if(o.range==='drop'){ st.dropped++; continue; } while(p<48) p+=12; while(p>81) p-=12; st.folded++; }
+    const lane = midiLane(p); if(lane < 0) continue;
+    const t = Math.round(n.b*TPQ/o.q)*o.q;
+    if(!m.has(t)) m.set(t, new Set()); m.get(t).add(lane);
+  }
+  let notes = [];
+  for(const [t, set] of m){
+    const ls = [...set].sort((a,b)=>b-a);
+    const keep = ls.length > o.maxChord ? [ls[0], ...ls.slice(1).reverse().slice(0, o.maxChord-1)] : ls; // 最高音(メロディ)＋低い方から
+    st.cut += ls.length - keep.length;
+    keep.forEach(l => notes.push([t, l]));
+  }
+  notes.sort((a,b)=>a[0]-b[0] || a[1]-b[1]);
+  if(notes.length){ const bar = TPQ*(o.beats||4), t0 = Math.floor(notes[0][0]/bar)*bar; if(t0>0) notes = notes.map(([t,l])=>[t-t0,l]); }
+  return {notes, st};
+}
+
+/* ================= 曲データの計算 ================= */
+function lastTick(song){ return song.notes.reduce((m,n)=>Math.max(m,n[0]), 0); }
+function musicTicks(song){
+  const bar = TPQ*(song.beats||4);
+  const need = song.notes.length ? lastTick(song) + TPQ : bar*4;
+  return Math.max(bar*4, Math.ceil(need/bar)*bar + (song.extraBars||0)*bar);
+}
+function cardLen(song){ return LEAD + musicTicks(song)*gridMm() + TAIL; }
+function noteY(t){ return LEAD + t*gridMm(); }
+function warnSet(song){
+  const last = {}, w = new Set();
+  const sorted = [...song.notes].sort((a,b)=>a[0]-b[0]);
+  for(const [t,l] of sorted){
+    if(last[l] !== undefined && (t-last[l])*gridMm() < S.warnMm - 1e-6) w.add(t+','+l);
+    last[l] = t;
+  }
+  return w;
+}
+
+/* ================= 描画（SVG/PDF共通の命令列） ================= */
+// ops: {t:'line',x1,y1,x2,y2,w,c,dash} {t:'circle',x,y,r,fill,stroke,w,dash} {t:'rect',x,y,w,h,stroke,sw,fill} {t:'text',x,y,h,s,c,anchor,bold}
+function drawStrip(ops, song, x0, y0, s, e, opt){
+  const total = cardLen(song), mEnd = LEAD + musicTicks(song)*gridMm();
+  const Y = y => y0 + (y - s);
+  const lanesL = x0 + laneX(0) - S.pitchMm*0.5, lanesR = x0 + laneX(LANES-1) + S.pitchMm*0.5;
+  // 外枠（切り取り線）
+  ops.push({t:'rect', x:x0, y:y0, w:CARDW, h:e-s, stroke:'#555', sw:0.25, fill:'#fff'});
+  // 弁の線
+  const a = Math.max(s, LEAD), b = Math.min(e, mEnd);
+  if(b > a){
+    for(let i=0;i<LANES;i++){
+      const x = x0 + laneX(i);
+      if(STAFF.has(i)) ops.push({t:'line', x1:x, y1:Y(a), x2:x, y2:Y(b), w:0.6, c:'#ef8fa0'});
+      ops.push({t:'line', x1:x, y1:Y(a), x2:x, y2:Y(b), w: i===MIDC ? 0.35 : 0.12, c: i===MIDC ? '#222' : '#666'});
+    }
+    // 拍・小節の線
+    const g = gridMm(), bar = TPQ*(song.beats||4), mt = musicTicks(song);
+    for(let t=0; t<=mt; t+=TPQ/2){
+      const y = noteY(t); if(y < a-1e-6 || y > b+1e-6) continue;
+      if(t % bar === 0) ops.push({t:'line', x1:lanesL, y1:Y(y), x2:lanesR, y2:Y(y), w:0.35, c:'#333'});
+      else if(t % TPQ === 0) ops.push({t:'line', x1:lanesL, y1:Y(y), x2:lanesR, y2:Y(y), w:0.12, c:'#777'});
+      else for(let i=0;i<LANES;i++){ const x=x0+laneX(i); ops.push({t:'line', x1:x-0.6, y1:Y(y), x2:x+0.6, y2:Y(y), w:0.1, c:'#999'}); }
+    }
+    // 小節番号
+    for(let t=0, n=1; t<mt; t+=bar, n++){ const y=noteY(t); if(y>=a && y<b) ops.push({t:'text', x:x0+1.2, y:Y(y)+2.2, h:1.8, s:String(n), c:'#999'}); }
+  }
+  // 見出し（先頭）
+  if(s < LEAD){
+    const yb = Y(0);
+    // 矢印
+    ops.push({t:'line', x1:x0+4, y1:yb+18, x2:x0+4, y2:yb+3, w:0.8, c:'#222'});
+    ops.push({t:'line', x1:x0+4, y1:yb+3, x2:x0+2.3, y2:yb+6, w:0.8, c:'#222'});
+    ops.push({t:'line', x1:x0+4, y1:yb+3, x2:x0+5.7, y2:yb+6, w:0.8, c:'#222'});
+    ops.push({t:'text', x:x0+7, y:yb+5, h:2.2, s:'差し込む向き', c:'#666'});
+    ops.push({t:'rect', x:x0+7, y:yb+7, w:CARDW-10, h:12, stroke:'#333', sw:0.3});
+    const ttl = (song.title||'無題').slice(0,40), units = [...ttl].reduce((a,ch)=>a + (ch.charCodeAt(0) > 0x2000 ? 1 : 0.6), 0);
+    const th = Math.max(2.2, Math.min(4.5, 54/Math.max(units,1)));
+    ops.push({t:'text', x:x0+9, y:yb+13+th*0.4, h:th, s:ttl, c:'#111', bold:true});
+    // 音名
+    for(let i=0;i<LANES;i++) ops.push({t:'text', x:x0+laneX(i), y:yb+LEAD-2.5, h:1.9, s:laneName(i), c:i===MIDC?'#b0485f':'#555', anchor:'middle'});
+  }
+  // おわり
+  if(e > mEnd){ ops.push({t:'text', x:x0+CARDW/2, y:Y(mEnd)+8, h:3, s:'おわり', c:'#999', anchor:'middle'}); }
+  // 穴
+  const ws = warnSet(song);
+  for(const [t,l] of song.notes){
+    const y = noteY(t); if(y < s-1e-6 || y > e+1e-6) continue;
+    const x = x0 + laneX(l), yy = Y(y);
+    const nearJoin = opt.joins && ((s > 0 && y - s < JOIN_SAFE) || (e < total && e - y < JOIN_SAFE));
+    if(ws.has(t+','+l)) ops.push({t:'circle', x, y:yy, r:HOLE_R+0.7, fill:'none', stroke:'#e74c3c', w:0.45});
+    if(nearJoin) ops.push({t:'circle', x, y:yy, r:HOLE_R, fill:'#fff', stroke:'#111', w:0.3, dash:true});
+    else if(opt.holeStyle === 'cross'){
+      ops.push({t:'circle', x, y:yy, r:HOLE_R, fill:'none', stroke:'#111', w:0.25});
+      ops.push({t:'line', x1:x-1.6, y1:yy, x2:x+1.6, y2:yy, w:0.15, c:'#111'});
+      ops.push({t:'line', x1:x, y1:yy-1.6, x2:x, y2:yy+1.6, w:0.15, c:'#111'});
+    } else ops.push({t:'circle', x, y:yy, r:HOLE_R, fill:'#111'});
+  }
+  // テープ範囲の目印
+  if(opt.joins){
+    if(s > 0) ops.push({t:'line', x1:x0, y1:Y(s+JOIN_SAFE), x2:x0+CARDW, y2:Y(s+JOIN_SAFE), w:0.15, c:'#bbb', dash:true});
+    if(e < total) ops.push({t:'line', x1:x0, y1:Y(e-JOIN_SAFE), x2:x0+CARDW, y2:Y(e-JOIN_SAFE), w:0.15, c:'#bbb', dash:true});
+  }
+}
+function opsToSvg(ops, W, H, pxPerMm, extra){
+  let o = `<svg xmlns="http://www.w3.org/2000/svg" width="${W*pxPerMm}" height="${H*pxPerMm}" viewBox="0 0 ${W} ${H}" ${extra||''}>`;
+  for(const p of ops){
+    if(p.t==='line') o += `<line x1="${p.x1}" y1="${p.y1}" x2="${p.x2}" y2="${p.y2}" stroke="${p.c}" stroke-width="${p.w}"${p.dash?' stroke-dasharray="1 0.8"':''}/>`;
+    else if(p.t==='rect') o += `<rect x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}" fill="${p.fill||'none'}" stroke="${p.stroke||'none'}" stroke-width="${p.sw||0}"/>`;
+    else if(p.t==='circle') o += `<circle cx="${p.x}" cy="${p.y}" r="${p.r}" fill="${p.fill||'none'}"${p.stroke?` stroke="${p.stroke}" stroke-width="${p.w}"`:''}${p.dash?' stroke-dasharray="0.6 0.5"':''}/>`;
+    else if(p.t==='text') o += `<text x="${p.x}" y="${p.y}" font-size="${p.h}" fill="${p.c}" text-anchor="${p.anchor||'start'}" ${p.bold?'font-weight="700"':''} font-family="sans-serif">${esc(p.s)}</text>`;
+  }
+  return o + '</svg>';
+}
+
+/* ================= エディタ ================= */
+let cur = null, undoStack = [];
+function setCur(song){ cur = song; undoStack = []; $('edTitle').value = song.title || ''; $('bpm').value = song.bpm || 90; $('bpmV').textContent = $('bpm').value; $('reArrBtn').style.display = song.src ? '' : 'none'; renderEditor(); }
+function pushUndo(){ undoStack.push(JSON.stringify(cur.notes)); if(undoStack.length > 60) undoStack.shift(); }
+function undo(){ if(!undoStack.length) return toast('これ以上戻せません'); cur.notes = JSON.parse(undoStack.pop()); cur.dirty = true; renderEditor(); }
+function renderEditor(){
+  const el = $('editor');
+  if(!cur){ el.innerHTML = '<p class="muted" style="padding:20px;text-align:center">ライブラリから曲を選ぶか、新しく作ってください</p>'; $('edStats').textContent=''; return; }
+  const z = +$('zoom').value, L = cardLen(cur), ops = [];
+  drawStrip(ops, cur, 0, 0, 0, L, {joins:false, holeStyle:'fill'});
+  el.innerHTML = opsToSvg(ops, CARDW, L, z, 'id="edSvg"');
+  const ws = warnSet(cur), bars = musicTicks(cur)/(TPQ*(cur.beats||4));
+  $('edStats').innerHTML = `穴 ${cur.notes.length}個 ／ ${bars}小節（${cur.beats||4}拍子） ／ 長さ ${Math.round(L)}mm（市販カード約${(L/534).toFixed(1)}枚分）` + (ws.size ? ` ／ <span class="err">連打注意 ${ws.size}か所</span>` : '');
+  $('edSvg').addEventListener('click', onEdTap);
+}
+function onEdTap(ev){
+  const svg = ev.currentTarget, r = svg.getBoundingClientRect();
+  const mmx = (ev.clientX - r.left) / r.width * CARDW, mmy = (ev.clientY - r.top) / r.height * cardLen(cur);
+  const lane = Math.round((mmx - S.marginMm) / S.pitchMm);
+  if(lane < 0 || lane >= LANES || Math.abs(mmx - laneX(lane)) > S.pitchMm*0.55) return;
+  if(mmy < LEAD - gridMm()) return;
+  const snap = +S.snap, t = Math.round((mmy - LEAD) / gridMm() / snap) * snap;
+  if(t < 0 || t >= musicTicks(cur)) return;
+  pushUndo();
+  const i = cur.notes.findIndex(n => n[0]===t && n[1]===lane);
+  if(i >= 0) cur.notes.splice(i,1); else { cur.notes.push([t,lane]); beep(laneMidi(lane)); }
+  cur.dirty = true;
+  const sc = $('editorWrap').scrollTop; renderEditor(); $('editorWrap').scrollTop = sc;
+}
+function shiftAll(d){
+  if(!cur) return; pushUndo(); let lost = 0;
+  cur.notes = cur.notes.map(([t,l]) => [t, l+d]).filter(n => { const ok = n[1]>=0 && n[1]<LANES; if(!ok) lost++; return ok; });
+  cur.dirty = true; renderEditor(); if(lost) toast(`音域外になった${lost}個の穴を削除しました`);
+}
+function addBars(n){ if(!cur) return; cur.extraBars = (cur.extraBars||0) + n; renderEditor(); }
+function trimBars(){ if(!cur) return; cur.extraBars = 0; renderEditor(); }
+$('zoom').oninput = () => renderEditor();
+$('bpm').oninput = () => { $('bpmV').textContent = $('bpm').value; if(cur){ cur.bpm = +$('bpm').value; } };
+$('edTitle').oninput = () => { if(cur){ cur.title = $('edTitle').value; cur.dirty = true; } };
+function newBlank(){ setCur({id:null, title:'新しい曲', beats:4, bpm:90, notes:[], extraBars:12}); showTab('edit'); }
+async function saveSong(){
+  if(!cur) return;
+  if(!cryptoKey) return toast('ロックを解除してください');
+  cur.title = $('edTitle').value.trim() || '無題';
+  const rec = {id: cur.id || uid(), title:cur.title, beats:cur.beats||4, bpm:cur.bpm||90, notes:cur.notes, extraBars:cur.extraBars||0, src:cur.src||null, opts:cur.opts||null, updated:Date.now()};
+  const i = vault.songs.findIndex(s => s.id === rec.id);
+  if(i >= 0) vault.songs[i] = rec; else vault.songs.unshift(rec);
+  cur.id = rec.id; cur.dirty = false;
+  await saveVault(); renderLib(); refreshPrintSongs(); toast('保存しました（暗号化済み）');
+}
+
+/* ================= ライブラリ ================= */
+function renderLib(){
+  const L = vault.songs;
+  $('libCount').textContent = L.length;
+  $('libList').innerHTML = L.length ? L.map(s => `
+    <div class="song"><div class="t"><b>${esc(s.title)}</b><small>穴${s.notes.length}個・${new Date(s.updated).toLocaleDateString('ja-JP')}</small></div>
+    <button class="btn sub" onclick="openSong('${s.id}')">開く</button>
+    <button class="btn ghost" onclick="printSong('${s.id}')">🖨</button>
+    <button class="btn danger" onclick="delSong('${s.id}')">🗑</button></div>`).join('')
+    : '<p class="muted">まだ曲がありません。MIDIの読み込みか、ドレミ入力から作れます。</p>';
+  $('pdList').innerHTML = PD.map((p,i) => `
+    <div class="song"><div class="t"><b>${esc(p.title)}</b><small>${p.beats}拍子</small></div>
+    <button class="btn sub" onclick="openPD(${i})">開く</button></div>`).join('');
+}
+function openSong(id){ const s = vault.songs.find(x=>x.id===id); if(!s) return; setCur(JSON.parse(JSON.stringify(s))); showTab('edit'); }
+async function delSong(id){ const s = vault.songs.find(x=>x.id===id); if(!s || !confirm(`「${s.title}」を削除しますか？`)) return; vault.songs = vault.songs.filter(x=>x.id!==id); await saveVault(); renderLib(); refreshPrintSongs(); if(cur && cur.id===id) cur.id=null; }
+function openPD(i){
+  const p = PD[i];
+  const src = parseText(p.text);
+  const {notes} = arrange(src, {shift:0, black:'down', range:'fold', q:1, maxChord:20, beats:p.beats});
+  setCur({id:null, title:p.title, beats:p.beats, bpm:p.bpm, notes, extraBars:0}); showTab('edit');
+}
+function printSong(id){ showTab('print'); $('prSong').value = id; renderPrintPreview(); }
+
+/* ================= 取り込み ================= */
+let imp = null;
+(function fillShift(){ let h = '<option value="auto">自動（おすすめ）</option>'; for(let s=24;s>=-24;s--) if(s) h += `<option value="${s}">${s>0?'+':''}${s}半音</option>`; h += '<option value="0">移調しない</option>'; $('impShift').innerHTML = h; })();
+function openTracksImport(title, name, tracks, bpm, beats){
+  imp = {kind:'midi', tracks, beats};
+  $('impTitle').textContent = title;
+  $('impName').value = name;
+  $('impBpm').value = bpm || 90;
+  $('impTracksBox').style.display = ''; $('impTextBox').style.display = 'none';
+  $('impTracks').innerHTML = tracks.map(t => `<label class="trk"><input type="checkbox" value="${t.id}" checked onchange="updImp()"><span class="grow">${esc(t.name)}<br><small class="muted">${t.notes.length}音・${noteName(t.lo)}〜${noteName(t.hi)}</small></span></label>`).join('');
+  $('impShift').value = 'auto'; $('impChord').value = '3';
+  openImp();
+}
+$('midiFile').onchange = async ev => {
+  const f = ev.target.files[0]; ev.target.value = ''; if(!f) return;
+  try{
+    const r = parseMidi(await f.arrayBuffer());
+    openTracksImport('MIDIを取り込む', f.name.replace(/\.(mid|midi)$/i,''), r.tracks, r.bpm, r.beats);
+  } catch(e){ alert('読み込めませんでした：' + e.message); }
+};
+function openText(){
+  imp = {kind:'text', beats:4};
+  $('impTitle').textContent = 'ドレミで入力';
+  $('impName').value = ''; $('impBpm').value = 90;
+  $('impTracksBox').style.display = 'none'; $('impTextBox').style.display = '';
+  $('impShift').value = '0'; $('impChord').value = '20';
+  openImp();
+}
+function noteName(p){ const n=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']; return n[p%12] + (Math.floor(p/12)-1); }
+function openImp(){ $('impBeats').value = String([2,3,4].includes(imp.beats)?imp.beats:4); $('impDlg').classList.add('on'); updImp(); }
+function closeImp(){ $('impDlg').classList.remove('on'); stopPlay(); }
+['impShift','impBlack','impRange','impQ','impChord','impBeats'].forEach(id => $(id).onchange = updImp);
+$('impText').oninput = () => { clearTimeout(imp && imp._t); if(imp) imp._t = setTimeout(updImp, 300); };
+function impSource(){
+  if(imp.kind === 'midi'){
+    const on = new Set([...document.querySelectorAll('#impTracks input:checked')].map(i=>+i.value));
+    return imp.tracks.filter(t=>on.has(t.id)).flatMap(t=>t.notes);
+  }
+  return parseText($('impText').value);
+}
+function impOpts(){ const sv = $('impShift').value; return {shift: sv==='auto' ? 'auto' : +sv, black:$('impBlack').value, range:$('impRange').value, q:+$('impQ').value, maxChord:+$('impChord').value, beats:+$('impBeats').value}; }
+function updImp(){
+  if(!imp) return;
+  let src;
+  try { src = impSource(); $('impMsg').textContent = ''; }
+  catch(e){ $('impStats').innerHTML=''; $('impMsg').innerHTML = `<span class="err">${esc(e.message)}</span>`; imp.result=null; return; }
+  if(!src.length){ $('impStats').innerHTML=''; $('impMsg').textContent='トラックを選んでください'; imp.result=null; return; }
+  const o = impOpts(), r = arrange(src, o);
+  imp.src = src; imp.result = r; imp.opts = o;
+  const song = {notes:r.notes, beats:o.beats};
+  const ws = warnSet(song), L = cardLen(song);
+  const sh = r.st.shift;
+  $('impStats').innerHTML = `
+    <div class="stat"><b>${sh>0?'+':''}${sh}</b><small>移調（半音）</small></div>
+    <div class="stat"><b>${r.notes.length}</b><small>穴の数</small></div>
+    <div class="stat"><b>${Math.round(L)}<small>mm</small></b><small>長さ（約${(L/534).toFixed(1)}枚分）</small></div>
+    <div class="stat"><b class="${r.st.black?'warn':''}">${r.st.black}</b><small>半音の処理</small></div>
+    <div class="stat"><b class="${r.st.folded?'warn':''}">${r.st.folded}</b><small>オクターブ移動</small></div>
+    <div class="stat"><b class="${ws.size?'err':''}">${ws.size}</b><small>連打注意</small></div>`;
+  const pct = src.length ? Math.round(r.st.black/src.length*100) : 0;
+  $('impMsg').innerHTML = (pct > 15 ? `<span class="warn">半音が${pct}%あります。移調を変えるか、トラックを絞ると原曲に近づくことがあります。</span> ` : '') + (r.st.cut ? `和音の上限で${r.st.cut}音を省きました。` : '');
+}
+function previewImp(){ if(!imp || !imp.result) return; playNotes(imp.result.notes, +$('impBpm').value || 90); }
+function commitImp(){
+  if(!imp || !imp.result) return;
+  const beats = +$('impBeats').value || 4;
+  const song = {id:null, title:$('impName').value.trim() || '無題', beats, bpm:+$('impBpm').value || 90, notes:imp.result.notes, extraBars:0,
+    src: imp.src.map(n=>[+n.b.toFixed(4), n.p]), opts: imp.opts, dirty:true};
+  closeImp(); setCur(song); showTab('edit'); toast('カードにしました。保存を忘れずに');
+}
+function reArrange(){
+  if(!cur || !cur.src) return;
+  if(!confirm('元の曲データから作り直します。手で直した部分は消えます。よろしいですか？')) return;
+  imp = {kind:'re', beats:cur.beats||4, fixed:cur.src.map(([b,p])=>({b,p}))};
+  $('impTitle').textContent = '再アレンジ'; $('impName').value = cur.title; $('impBpm').value = cur.bpm || 90;
+  $('impTracksBox').style.display = 'none'; $('impTextBox').style.display = 'none';
+  const o = cur.opts || {};
+  $('impShift').value = 'auto'; $('impBlack').value = o.black||'down'; $('impRange').value = o.range||'fold'; $('impQ').value = String(o.q||2); $('impChord').value = String(o.maxChord||3);
+  imp._cid = cur.id; openImp();
+}
+const _impSource = impSource;
+impSource = function(){ return imp.kind === 're' ? imp.fixed : _impSource(); };
+const _commit = commitImp;
+commitImp = function(){ const id = imp && imp.kind==='re' ? imp._cid : null; _commit(); if(id) cur.id = id; };
+
+/* ================= 試聴（オルゴール風の音） ================= */
+let actx = null, playing = null;
+function ac(){ if(!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); if(actx.state==='suspended') actx.resume(); return actx; }
+function tone(midi, when, ctx){
+  const f = 440 * Math.pow(2, (midi + 12 - 69)/12); // 実機に近い1オクターブ上で鳴らす
+  const g = ctx.createGain(); g.connect(ctx.destination);
+  g.gain.setValueAtTime(0.0001, when); g.gain.exponentialRampToValueAtTime(0.22, when+0.004); g.gain.exponentialRampToValueAtTime(0.0001, when+1.6);
+  [[1,1],[2.76,0.25],[5.4,0.08]].forEach(([m,a]) => { const o = ctx.createOscillator(), gg = ctx.createGain(); o.type='sine'; o.frequency.value = f*m; gg.gain.value = a; o.connect(gg); gg.connect(g); o.start(when); o.stop(when+1.7); });
+}
+function beep(m){ try{ const c = ac(); tone(m, c.currentTime+0.01, c); }catch(e){} }
+function playNotes(notes, bpm, onEnd){
+  stopPlay(); const c = ac(); const t0 = c.currentTime + 0.1, sp = 60/bpm/TPQ;
+  const sorted = [...notes].sort((a,b)=>a[0]-b[0]);
+  const endT = (sorted.length ? sorted[sorted.length-1][0] : 0)*sp + 1.8;
+  // 先読みスケジューラ
+  let idx = 0;
+  const timer = setInterval(() => {
+    const now = c.currentTime - t0;
+    while(idx < sorted.length && sorted[idx][0]*sp < now + 1.0){ tone(laneMidi(sorted[idx][1]), t0 + sorted[idx][0]*sp, c); idx++; }
+    if(now > endT){ stopPlay(); }
+  }, 150);
+  playing = {timer, t0, sp, onEnd};
+  if(cur && notes === cur.notes) followPlayhead();
+}
+function stopPlay(){ if(playing){ clearInterval(playing.timer); const cb = playing.onEnd; playing = null; if(actx){ actx.close(); actx = null; } if(cb) cb(); } $('playBtn').textContent = '▶ 試聴'; const ph = document.getElementById('ph'); if(ph) ph.remove(); }
+function togglePlay(){ if(playing) return stopPlay(); if(!cur || !cur.notes.length) return toast('穴がありません'); playNotes(cur.notes, +$('bpm').value); $('playBtn').textContent = '■ 停止'; }
+function followPlayhead(){
+  const svg = $('edSvg'); if(!svg) return;
+  const ns = 'http://www.w3.org/2000/svg', ln = document.createElementNS(ns, 'line');
+  ln.id = 'ph'; ln.setAttribute('x1', 0); ln.setAttribute('x2', CARDW); ln.setAttribute('stroke', '#3a7bd5'); ln.setAttribute('stroke-width', '0.5'); svg.appendChild(ln);
+  const wrap = $('editorWrap'), z = +$('zoom').value;
+  const step = () => {
+    if(!playing || !actx) return;
+    const tick = (actx.currentTime - playing.t0) / playing.sp, y = noteY(Math.max(0,tick));
+    ln.setAttribute('y1', y); ln.setAttribute('y2', y);
+    wrap.scrollTop = y*z - wrap.clientHeight*0.35;
+    requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+/* ================= 印刷（PDF） ================= */
+const PAPER = {a4:{w:210,h:297,label:'A4'}, a3:{w:297,h:420,label:'A3'}};
+function paperDims(k){ if(k==='long'){ const h = Math.max(300, Math.min(1200, +$('prLen').value || 676)); return {w:210, h, label:`長尺210×${h}mm`}; } return PAPER[k]; }
+function layoutPages(song, paperKey){
+  const P = paperDims(paperKey), M = 8, GAP = 14, TOP = M + 6;
+  const segMax = P.h - TOP - M - 4;
+  const cols = Math.floor((P.w - 2*M + GAP) / (CARDW + GAP));
+  const total = cardLen(song);
+  const ys = song.notes.map(n => noteY(n[0]));
+  const segs = []; let s = 0;
+  while(s < total - 0.01){
+    let e = Math.min(total, s + segMax);
+    if(e < total){ while(e > s + segMax*0.6 && ys.some(y => Math.abs(y - e) < HOLE_R + 1.5)) e -= 0.25; }
+    segs.push([s, e]); s = e;
+  }
+  const pages = [];
+  for(let i=0;i<segs.length;i+=cols) pages.push(segs.slice(i, i+cols).map((sg,j)=>({s:sg[0], e:sg[1], idx:i+j})));
+  return {P, M, GAP, TOP, cols, segs, pages, total};
+}
+function pageOps(song, lay, pi, holeStyle){
+  const {P, M, GAP, TOP, segs} = lay, ops = [];
+  lay.pages[pi].forEach((sg, j) => {
+    const x0 = M + j*(CARDW + GAP);
+    drawStrip(ops, song, x0, TOP, sg.s, sg.e, {joins:true, holeStyle});
+    const n = segs.length;
+    ops.push({t:'text', x:x0 + CARDW, y:TOP - 2, h:3.2, s:`${sg.idx+1} / ${n}`, c:'#b0485f', anchor:'end', bold:true});
+    if(sg.idx > 0) ops.push({t:'text', x:x0, y:TOP - 2, h:2.4, s:`↑ ${sg.idx} の下端につなぐ`, c:'#777'});
+    if(sg.idx < n-1) ops.push({t:'text', x:x0 + CARDW/2, y:TOP + (sg.e - sg.s) + 4, h:2.4, s:`↓ ${sg.idx+2} へつづく`, c:'#777', anchor:'middle'});
+  });
+  if(pi === 0){ // 100mm定規
+    const used = lay.pages[0].length, rx = M + used*(CARDW + GAP) + 2;
+    if(P.w - M - rx >= 16){
+      ops.push({t:'line', x1:rx+4, y1:TOP, x2:rx+4, y2:TOP+100, w:0.3, c:'#111'});
+      for(let k=0;k<=100;k++){ const L = k%10===0 ? 4 : (k%5===0 ? 2.8 : 1.6); ops.push({t:'line', x1:rx+4, y1:TOP+k, x2:rx+4+L, y2:TOP+k, w:0.12, c:'#111'}); }
+      for(let k=0;k<=100;k+=10) ops.push({t:'text', x:rx+9, y:TOP+k+1, h:2.2, s:String(k), c:'#111'});
+      ops.push({t:'text', x:rx+2, y:TOP+106, h:2.4, s:'↑ 100mmか確認', c:'#b0485f'});
+      ops.push({t:'text', x:rx+2, y:TOP+110, h:2.2, s:'倍率100%で印刷', c:'#777'});
+    }
+  }
+  ops.push({t:'text', x:P.w/2, y:P.h - 4, h:2.4, s:`${song.title||''}　${pi+1}/${lay.pages.length}ページ　点線の丸はテープを貼った後に穴あけ`, c:'#999', anchor:'middle'});
+  return ops;
+}
+function refreshPrintSongs(){
+  const sel = $('prSong'), keep = sel.value;
+  const opts = [];
+  if(cur) opts.push(`<option value="__cur">（編集中）${esc(cur.title||'無題')}</option>`);
+  vault.songs.forEach(s => opts.push(`<option value="${s.id}">${esc(s.title)}</option>`));
+  sel.innerHTML = opts.join('') || '<option value="">曲がありません</option>';
+  if([...sel.options].some(o=>o.value===keep)) sel.value = keep;
+}
+function printTarget(){ const v = $('prSong').value; if(v === '__cur') return cur; return vault.songs.find(s=>s.id===v) || null; }
+function renderPrintPreview(){
+  const song = printTarget(), box = $('prPages');
+  if(!song){ box.innerHTML = ''; $('prInfo').textContent = '曲を選んでください'; return; }
+  const lay = layoutPages(song, $('prPaper').value);
+  $('prInfo').innerHTML = `カードの全長 ${Math.round(lay.total)}mm → ${lay.segs.length}本に分けて、${paperDims($('prPaper').value).label}の用紙${lay.pages.length}枚に印刷します。` + (warnSet(song).size ? ` <span class="err">連打注意 ${warnSet(song).size}か所（赤い丸）</span>` : '');
+  box.innerHTML = lay.pages.map((_,i) => opsToSvg(pageOps(song, lay, i, $('prHole').value), lay.P.w, lay.P.h, 150/lay.P.w)).join('');
+}
+['prSong','prPaper','prHole','prLen'].forEach(id => $(id).onchange = () => { $('prLenBox').style.display = $('prPaper').value==='long' ? '' : 'none'; renderPrintPreview(); });
+function gotoPrint(){ showTab('print'); $('prSong').value = cur && !cur.id ? '__cur' : (cur ? cur.id : ''); if(cur && cur.dirty) $('prSong').value='__cur'; renderPrintPreview(); }
+function textImage(s, hMm, color, bold){
+  const pxmm = 24, c = document.createElement('canvas'), x = c.getContext('2d');
+  const font = `${bold?'700 ':''}${hMm*pxmm}px "Hiragino Sans","Noto Sans JP",sans-serif`;
+  x.font = font; const w = Math.ceil(x.measureText(s).width) + 4;
+  c.width = w; c.height = Math.ceil(hMm*pxmm*1.35);
+  x.font = font; x.fillStyle = color; x.textBaseline = 'alphabetic'; x.fillText(s, 2, hMm*pxmm*1.02);
+  return {url: c.toDataURL('image/png'), w: w/pxmm, h: c.height/pxmm, base: hMm*1.02};
+}
+const hex = c => { const h = c.replace('#',''); const f = h.length===3 ? h.split('').map(x=>x+x).join('') : h; return [parseInt(f.slice(0,2),16), parseInt(f.slice(2,4),16), parseInt(f.slice(4,6),16)]; };
+function renderPdf(doc, ops){
+  for(const p of ops){
+    if(p.t === 'line'){ doc.setDrawColor(...hex(p.c)); doc.setLineWidth(p.w); doc.setLineDashPattern(p.dash ? [1,0.8] : [], 0); doc.line(p.x1, p.y1, p.x2, p.y2); }
+    else if(p.t === 'rect'){ doc.setLineDashPattern([],0); if(p.stroke){ doc.setDrawColor(...hex(p.stroke)); doc.setLineWidth(p.sw); } if(p.fill && p.fill!=='none') doc.setFillColor(...hex(p.fill)); doc.rect(p.x, p.y, p.w, p.h, (p.fill && p.fill!=='none') ? (p.stroke?'FD':'F') : 'S'); }
+    else if(p.t === 'circle'){
+      doc.setLineDashPattern(p.dash ? [0.6,0.5] : [], 0);
+      const fill = p.fill && p.fill !== 'none';
+      if(fill) doc.setFillColor(...hex(p.fill));
+      if(p.stroke){ doc.setDrawColor(...hex(p.stroke)); doc.setLineWidth(p.w); }
+      doc.circle(p.x, p.y, p.r, fill ? (p.stroke ? 'FD' : 'F') : 'S');
+    }
+    else if(p.t === 'text'){
+      const im = textImage(p.s, p.h, p.c, p.bold);
+      let x = p.x - (p.anchor==='middle' ? im.w/2 : p.anchor==='end' ? im.w : 0);
+      doc.addImage(im.url, 'PNG', x - 2/24, p.y - im.base, im.w, im.h);
+    }
+  }
+  doc.setLineDashPattern([],0);
+}
+function makePdf(){
+  const song = printTarget(); if(!song) return toast('曲を選んでください');
+  if(!window.jspdf) return alert('PDFライブラリを読み込めませんでした。一度ネットにつないで開き直してください。');
+  const pk = $('prPaper').value, lay = layoutPages(song, pk);
+  const fmt = pk==='long' ? [lay.P.w, lay.P.h] : pk;
+  const doc = new window.jspdf.jsPDF({unit:'mm', format:fmt, orientation:'portrait', compress:true});
+  lay.pages.forEach((_, i) => { if(i) doc.addPage(fmt, 'portrait'); renderPdf(doc, pageOps(song, lay, i, $('prHole').value)); });
+  const name = (song.title||'card').replace(/[\\/:*?"<>|]/g,'_') + `_20弁_${lay.P.label}.pdf`;
+  const blob = doc.output('blob');
+  const file = new File([blob], name, {type:'application/pdf'});
+  if(navigator.canShare && navigator.canShare({files:[file]}) && /iPhone|iPad|Android/i.test(navigator.userAgent)){
+    navigator.share({files:[file], title:name}).catch(()=>{});
+  } else {
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+  }
+  toast('PDFを作成しました。倍率100%で印刷してください');
+}
+
+/* ================= 設定・バックアップ ================= */
+function loadSettingsUI(){ $('sBeat').value=S.beatMm; $('sPitch').value=S.pitchMm; $('sMargin').value=S.marginMm; $('sWarn').value=S.warnMm; $('sSnap').value=String(S.snap); }
+function saveSettings(){
+  const v = {beatMm:+$('sBeat').value, pitchMm:+$('sPitch').value, marginMm:+$('sMargin').value, warnMm:+$('sWarn').value, snap:+$('sSnap').value};
+  if(!(v.beatMm>2 && v.beatMm<20 && v.pitchMm>1 && v.pitchMm<5 && v.marginMm>=2 && v.marginMm+19*v.pitchMm<=CARDW-2)) return alert('値が範囲外です');
+  Object.assign(S, v); localStorage.setItem('oc_settings', JSON.stringify(S)); toast('保存しました'); renderEditor();
+}
+function resetSettings(){ S = Object.assign({}, DEF); localStorage.removeItem('oc_settings'); loadSettingsUI(); renderEditor(); toast('初期値に戻しました'); }
+function exportBackup(){
+  const rec = localStorage.getItem(VKEY); if(!rec) return;
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([rec], {type:'application/json'}));
+  a.download = `organette-card-backup-${new Date().toISOString().slice(0,10)}.json`; a.click();
+}
+$('bkFile').onchange = async ev => {
+  const f = ev.target.files[0]; ev.target.value=''; if(!f) return;
+  try{
+    const rec = JSON.parse(await f.text());
+    const pw = prompt('バックアップを書き出したときのパスワード'); if(!pw) return;
+    const data = await decryptObj(rec, await deriveKey(pw, unb64(rec.salt)));
+    let add = 0; for(const s of data.songs||[]){ if(!vault.songs.some(x=>x.id===s.id)){ vault.songs.push(s); add++; } }
+    await saveVault(); renderLib(); refreshPrintSongs(); toast(`${add}曲を追加しました`);
+  } catch(e){ alert('読み込めませんでした（パスワードが違うか、ファイルが壊れています）'); }
+};
+async function changePw(){
+  const a = $('npw1').value, b = $('npw2').value;
+  if(a.length < 4) return alert('4文字以上にしてください'); if(a !== b) return alert('確認用と一致しません');
+  vaultSalt = crypto.getRandomValues(new Uint8Array(16)); cryptoKey = await deriveKey(a, vaultSalt); await saveVault();
+  $('npw1').value = $('npw2').value = ''; toast('パスワードを変更しました');
+}
+
+/* ================= タブ ================= */
+function showTab(name){
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.id === 'tab-'+name));
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === name));
+  if(name === 'edit') renderEditor();
+  if(name === 'print'){ refreshPrintSongs(); renderPrintPreview(); }
+  if(name === 'set') loadSettingsUI();
+  window.scrollTo(0,0);
+}
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
+window.addEventListener('beforeunload', e => { if(cur && cur.dirty){ e.preventDefault(); e.returnValue=''; } });
+
+function updateApp() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(regs => { regs.forEach(r => r.update()); });
+  }
+  location.reload(true);
+}
+
+renderLib(); renderEditor(); lockSetup();
+if('serviceWorker' in navigator){ window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{})); }
+</script>
+<script src="omr.js"></script>
+</body>
+</html>
