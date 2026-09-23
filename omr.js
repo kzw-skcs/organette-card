@@ -350,7 +350,8 @@ const OMR = (() => {
           rd = 0.5;                                                                                // 8分休符
         } else if(h >= 1.9*s && h < 2.5*s && w >= 0.6*s && w <= 1.4*s && dens > 0.18 && dens < 0.6 && pick(x0,x1).len < 0.6*h){
           rd = 0.25;                                                                               // 16分休符
-        } else if(h >= 2.5*s && h <= 3.4*s && w >= 0.6*s && w <= 1.35*s && dens > 0.2 && dens < 0.6 && pick(x0,x1).len < 0.6*h && Math.abs(cy - mid) < 0.8*s){
+        } else if(h >= 2.5*s && h <= 3.4*s && w >= 0.6*s && w <= 1.35*s && dens > 0.2 && dens < 0.6 && pick(x0,x1).len < 0.75*h && Math.abs(cy - mid) < 0.8*s
+                  && !(pick(x0, x0+Math.round(w*0.4)).len >= 0.55*h && pick(x1-Math.round(w*0.4), x1).len >= 0.55*h)){   // ♯♮（左右に長い縦線）とは区別
           rd = 1;                                                                                  // 4分休符
         }
         if(rd){ rests.push({x:(x0+x1)/2, y:cy, staff:si, dur:rd, x0, x1}); continue; }
@@ -593,6 +594,8 @@ const OMR = (() => {
           const evs = ((pg.keyEv && pg.keyEv[si]) || []).slice().sort((a,b)=>a.x0-b.x0);
           const keyStart = evs.length && evs[0].atStart ? evs[0].key : (carry[role] ?? 0);
           const keyAt = x => { let k = keyStart; for(const e of evs) if(e.x0 < x) k = e.key; return k; };
+          pg._keyLab = pg._keyLab || {};
+          pg._keyLab[si] = [{x: st.x0, key: opt.key === 'auto' ? keyStart : opt.key}].concat(opt.key === 'auto' ? evs.filter(e => !e.atStart).map(e => ({x:e.x0, key:e.key})) : []);
           const hsAll = pg.heads.filter(h => h.staff === si);
           let mi = mStart;
           for(let k=0;k<bounds.length-1;k++){
@@ -690,25 +693,42 @@ async function scanRun(){
 }
 function scanRecalc(){
   const r = OMR.build(SCAN.pages, scanOpts()); SCAN.result = r;
-  const nh = SCAN.pages.reduce((a,p)=>a+p.heads.length,0);
-  $('scStats').innerHTML = `<div class="stat"><b>${SCAN.pages.reduce((a,p)=>a+p.systems.length,0)}</b><small>段</small></div><div class="stat"><b>${r.measures}</b><small>小節</small></div><div class="stat"><b>${nh}</b><small>音符</small></div>`;
+  const sum = f => SCAN.pages.reduce((a,p)=>a+f(p),0);
+  const nh = sum(p => p.heads.length), nr = sum(p => (p.rests||[]).length);
+  const na = sum(p => p.heads.filter(h => h.acc !== undefined).length);
+  $('scStats').innerHTML = `<div class="stat"><b>${sum(p=>p.systems.length)}</b><small>段</small></div><div class="stat"><b>${r.measures}</b><small>小節</small></div><div class="stat"><b>${nh}</b><small>音符</small></div>`
+    + `<div class="stat"><b>${nr}</b><small>休符</small></div><div class="stat"><b>${na}</b><small>臨時記号 ♯♭♮</small></div><div class="stat"><b>${r.notes.length ? '♪' : '-'}</b><small>${r.notes.length}音を再生</small></div>`;
 }
+const KEYNAME = k => k === 0 ? 'なし' : (k > 0 ? '♯' : '♭') + Math.abs(k);
+const RESTNAME = {4:'全休', 2:'2分休', 1:'4分休', 0.5:'8分休', 0.25:'16分休'};
 function scanRender(){
   scanRecalc();
   const pg = SCAN.pages[SCAN.cur]; if(!pg) return;
   $('scPageNo').textContent = `${SCAN.cur+1} / ${SCAN.pages.length}ページ`;
   const o = scanOpts(), acc = OMR.keyAcc(o.key === 'auto' ? 0 : o.key);
+  const T = (x, y, sz, col, txt, anchor) => `<text x="${x}" y="${y}" font-size="${sz}" fill="${col}" font-weight="700" font-family="sans-serif" text-anchor="${anchor||'start'}" stroke="#fff" stroke-width="${sz*0.18}" paint-order="stroke">${txt}</text>`;
   let svg = `<svg id="scSvg" viewBox="0 0 ${pg.W} ${pg.H}" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%">`;
   for(const st of pg.staves) for(const y of st.ys) svg += `<line x1="${st.x0}" y1="${y}" x2="${st.x1}" y2="${y}" stroke="#3a7bd5" stroke-width="${st.s*0.08}" opacity=".45"/>`;
   for(const sy of pg.systems){
     for(const x of sy.bars) svg += `<line x1="${x}" y1="${sy.top - sy.s}" x2="${x}" y2="${sy.bot + sy.s}" stroke="#2f9e44" stroke-width="${sy.s*0.35}" opacity=".6"/>`;
   }
+  // 調号（段の頭と、途中で変わったところ）
+  pg.staves.forEach((st, si) => { for(const k of ((pg._keyLab || {})[si] || [])) svg += T(k.x, st.top - st.s*0.9, st.s*1.3, '#7048e8', '調:' + KEYNAME(k.key)); });
+  // 臨時記号（音符に付いたもの）と、調号として読んだ記号
+  for(const a of (pg.accs || [])){
+    const isKey = !a.used && ((pg.keyEv || [])[a.staff] || []).some(e => a.x0 >= e.x0 - 2 && a.x1 <= e.x1 + 2);
+    if(!a.used && !isKey) continue;
+    const col = a.used ? '#ae3ec9' : '#7048e8', s = pg.staves[a.staff].s;
+    svg += `<rect x="${a.x0 - 2}" y="${a.y0 - 2}" width="${a.x1 - a.x0 + 4}" height="${a.y1 - a.y0 + 4}" fill="${col}" fill-opacity=".12" stroke="${col}" stroke-width="${s*0.12}"/>`;
+  }
   for(const r of (pg.rests || [])){ const st = pg.staves[r.staff];
-    svg += `<rect x="${r.x - st.s*0.6}" y="${r.y - st.s*0.6}" width="${st.s*1.2}" height="${st.s*1.2}" fill="none" stroke="#f08c00" stroke-width="${st.s*0.15}"/>`; }
+    svg += `<rect x="${r.x - st.s*0.7}" y="${r.y - st.s*0.9}" width="${st.s*1.4}" height="${st.s*1.8}" fill="#f08c00" fill-opacity=".12" stroke="#f08c00" stroke-width="${st.s*0.15}"/>`;
+    svg += T(r.x, r.y + st.s*2.1, st.s*1.0, '#e8590c', RESTNAME[r.dur] || '休', 'middle'); }
   for(const h of pg.heads){
     const st = pg.staves[h.staff], clef = OMR.clefOf(pg, h.staff, o.mode, h.x), sy = pg.systems.find(y => y.staff.includes(h.staff)), lower = sy && sy.staff.length === 2 ? sy.staff[1] === h.staff : clef === 'F', col = lower ? '#1971c2' : '#e03131';
     svg += `<circle cx="${h.x}" cy="${h.y}" r="${st.s*0.62}" fill="none" stroke="${col}" stroke-width="${st.s*0.16}"/>`;
-    svg += `<text x="${h.x + st.s*0.7}" y="${h.y - st.s*0.55}" font-size="${st.s*1.05}" fill="${col}" font-weight="700" font-family="sans-serif">${h._name || OMR.nameOf(h.step, clef, acc)}</text>`;
+    const nm = h._name || OMR.nameOf(h.step, clef, acc);
+    svg += T(h.x + st.s*0.7, h.y - st.s*0.55, st.s*1.25, /[♯♭]/.test(nm) ? '#ae3ec9' : col, nm);
   }
   svg += '</svg>';
   $('scView').innerHTML = `<img src="${pg.url}" style="display:block;width:100%;height:auto">` + svg;
@@ -747,13 +767,16 @@ function scanPage(d){ const n = SCAN.cur + d; if(n < 0 || n >= SCAN.pages.length
 $('scMode').onchange = () => { if(SCAN.pages.length) toast('楽譜の種類を変えたときは「解析する」をもう一度押してください'); };
 function scanPlay(){
   if(!SCAN.result || !SCAN.result.notes.length) return toast('音符がありません');
-  stopPlay(); const c = ac(), t0 = c.currentTime + 0.1, sp = 60 / (+$('scBpm').value || 90);
-  const ns = [...SCAN.result.notes].sort((a,b)=>a.b-b.b); let idx = 0;
-  const end = (ns[ns.length-1].b)*sp + 1.8;
-  const timer = setInterval(() => { const now = c.currentTime - t0;
-    while(idx < ns.length && ns[idx].b*sp < now + 1){ tone(ns[idx].p - 12, t0 + ns[idx].b*sp, c); idx++; }
-    if(now > end) stopPlay(); }, 150);
-  playing = {timer, t0, sp: sp/TPQ, onEnd:null};
+  try{
+    stopPlay(); const c = ac(), t0 = c.currentTime + 0.15, sp = 60 / (+$('scBpm').value || 90);
+    const ns = [...SCAN.result.notes].sort((a,b)=>a.b-b.b); let idx = 0;
+    const end = (ns[ns.length-1].b)*sp + 1.8;
+    const timer = setInterval(() => { const now = c.currentTime - t0;
+      while(idx < ns.length && ns[idx].b*sp < now + 1){ tone(ns[idx].p - 12, t0 + ns[idx].b*sp, c); idx++; }
+      if(now > end) stopPlay(); }, 150);
+    playing = {timer, t0, sp: sp/TPQ, onEnd:null};
+    setTimeout(() => { if(actx && actx.state !== 'running') toast('音が出ない場合：消音スイッチ・音量を確認し、もう一度▶を押してください'); }, 600);
+  } catch(e){ alert('再生できませんでした：' + e.message); }
 }
 function scanTitle(){ return ($('scTitle').value.trim() || (SCAN.file ? SCAN.file.name.replace(/\.[^.]+$/,'') : '楽譜')); }
 function scanMidi(){

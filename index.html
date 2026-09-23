@@ -96,7 +96,7 @@ code{background:#f1e9e4;padding:1px 5px;border-radius:5px;font-size:13px}
 </div>
 
 <header>
-  <h1>🎼 オルガニート カード工房</h1>
+  <h1>🎼 オルガニート カード工房 <small style="font-size:11px;opacity:.7;font-weight:400">v1.5</small></h1>
   <button onclick="lockNow()">🔒</button>
   <button onclick="updateApp()">🔄 更新</button>
 </header>
@@ -231,7 +231,7 @@ code{background:#f1e9e4;padding:1px 5px;border-radius:5px;font-size:13px}
       <div id="scWrap" style="overflow:auto;max-height:70vh;border:1px solid var(--line);border-radius:8px;background:#fff">
         <div id="scView" style="position:relative;width:250%"></div>
       </div>
-      <div class="legend"><span style="color:#e03131">● 右手（上の段）</span><span style="color:#1971c2">● 左手（下の段）</span><span style="color:#f08c00">□ 休符</span><span style="color:#2f9e44">｜ 小節線</span><span>音符モード：丸・四角をタップで削除、何もない所をタップで音符を追加</span></div>
+      <div class="legend"><span style="color:#e03131">● 右手（上の段）</span><span style="color:#1971c2">● 左手（下の段）</span><span style="color:#f08c00">□ 休符</span><span style="color:#ae3ec9">□ 臨時記号</span><span style="color:#7048e8">調:♯3 など＝読み取った調号</span><span style="color:#2f9e44">｜ 小節線</span><span>音符モード：丸・四角をタップで削除、何もない所をタップで音符を追加</span></div>
       <div class="row" style="margin-top:10px">
         <button class="btn sub grow" onclick="scanPlay()">▶ 試聴</button>
         <button class="btn ghost grow" onclick="stopPlay()">■ 停止</button>
@@ -269,6 +269,11 @@ code{background:#f1e9e4;padding:1px 5px;border-radius:5px;font-size:13px}
       <div class="row" style="margin-top:12px"><button class="btn" onclick="saveSettings()">設定を保存</button><button class="btn ghost" onclick="resetSettings()">初期値に戻す</button></div>
     </div>
     <div class="box">
+      <h2>音のテスト</h2>
+      <p class="muted">試聴の音が出ないときに押してください。iPhoneは消音スイッチ（マナーモード）と音量も確認してください。</p>
+      <div class="row"><button class="btn sub" onclick="audioTest()">🔊 ドレミを鳴らす</button><span id="audioInfo" class="muted" style="font-size:12px"></span></div>
+    </div>
+    <div class="box">
       <h2>バックアップ</h2>
       <p class="muted">ライブラリを暗号化されたファイルとして書き出せます。読み込むときは、書き出したときのパスワードが必要です。</p>
       <div class="row">
@@ -285,7 +290,7 @@ code{background:#f1e9e4;padding:1px 5px;border-radius:5px;font-size:13px}
     </div>
     <div class="box muted" style="font-size:12px">
       20弁：ド〜ラ（白鍵のみ）／カード幅70mm／弁の間隔3.0mm／四分音符7.5mm／穴径2mm<br>
-      オルガニート カード工房 v1.4 — 個人利用専用
+      オルガニート カード工房 v1.5 — 個人利用専用
     </div>
   </section>
 </main>
@@ -1141,6 +1146,13 @@ function showTab(name){
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
 window.addEventListener('beforeunload', e => { if(cur && cur.dirty){ e.preventDefault(); e.returnValue=''; } });
 
+function audioTest(){
+  try{
+    const c = ac(); const t = c.currentTime + 0.1;
+    [60,62,64,65,67].forEach((m,i) => tone(m, t + i*0.25, c));
+    setTimeout(() => { $('audioInfo').textContent = `状態: ${actx ? actx.state : 'なし'} ／ ${navigator.audioSession ? 'audioSession対応' : 'audioSession非対応'} ／ v1.5`; }, 400);
+  } catch(e){ $('audioInfo').textContent = 'エラー: ' + e.message; }
+}
 function updateApp() {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.getRegistrations().then(regs => { regs.forEach(r => r.update()); });
