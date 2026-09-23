@@ -143,6 +143,7 @@ code{background:#f1e9e4;padding:1px 5px;border-radius:5px;font-size:13px}
         <button class="btn ghost" onclick="addBars(4)">＋4小節</button>
         <button class="btn ghost" onclick="trimBars()">末尾を詰める</button>
         <button class="btn ghost" id="reArrBtn" onclick="reArrange()">🎛 再アレンジ</button>
+        <button class="btn ghost" onclick="openDigest()">✂️ ダイジェスト</button>
         <button class="btn ghost" onclick="gotoPrint()">🖨 印刷へ</button>
       </div>
       <div class="row muted" style="font-size:12px;margin-bottom:6px">
@@ -202,6 +203,7 @@ code{background:#f1e9e4;padding:1px 5px;border-radius:5px;font-size:13px}
           <select id="scMode"><option value="piano">ピアノ（大譜表：ト音＋ヘ音）</option><option value="treble">1段（ト音記号）</option><option value="bass">1段（ヘ音記号）</option></select></div>
         <div class="grow"><label class="f">調号</label>
           <select id="scKey">
+            <option value="auto" selected>自動（楽譜の調号を読み取る）</option>
             <option value="0">なし（ハ長調・イ短調）</option>
             <option value="1">♯1（ト長調・ホ短調）</option><option value="2">♯2（ニ長調・ロ短調）</option><option value="3">♯3（イ長調・嬰ヘ短調）</option><option value="4">♯4（ホ長調・嬰ハ短調）</option><option value="5">♯5（ロ長調）</option><option value="6">♯6（嬰ヘ長調）</option><option value="7">♯7（嬰ハ長調）</option>
             <option value="-1">♭1（ヘ長調・ニ短調）</option><option value="-2">♭2（変ロ長調・ト短調）</option><option value="-3">♭3（変ホ長調・ハ短調）</option><option value="-4">♭4（変イ長調・ヘ短調）</option><option value="-5">♭5（変ニ長調）</option><option value="-6">♭6（変ト長調）</option><option value="-7">♭7（変ハ長調）</option>
@@ -229,7 +231,7 @@ code{background:#f1e9e4;padding:1px 5px;border-radius:5px;font-size:13px}
       <div id="scWrap" style="overflow:auto;max-height:70vh;border:1px solid var(--line);border-radius:8px;background:#fff">
         <div id="scView" style="position:relative;width:250%"></div>
       </div>
-      <div class="legend"><span style="color:#e03131">● 右手（ト音）</span><span style="color:#1971c2">● 左手（ヘ音）</span><span style="color:#2f9e44">｜ 小節線</span><span>音符モード：丸をタップで削除、何もない所をタップで追加</span></div>
+      <div class="legend"><span style="color:#e03131">● 右手（上の段）</span><span style="color:#1971c2">● 左手（下の段）</span><span style="color:#f08c00">□ 休符</span><span style="color:#2f9e44">｜ 小節線</span><span>音符モード：丸・四角をタップで削除、何もない所をタップで音符を追加</span></div>
       <div class="row" style="margin-top:10px">
         <button class="btn sub grow" onclick="scanPlay()">▶ 試聴</button>
         <button class="btn ghost grow" onclick="stopPlay()">■ 停止</button>
@@ -242,9 +244,9 @@ code{background:#f1e9e4;padding:1px 5px;border-radius:5px;font-size:13px}
       <ol class="steps">
         <li>iPhoneの「メモ」や「ファイル」アプリの<b>書類をスキャン</b>を使うと、まっすぐで影のないPDFになります。</li>
         <li>1ページに楽譜1枚、300dpi程度が目安です。手書きの楽譜には対応していません。</li>
-        <li><b>調号</b>と<b>拍子</b>は自動では判定しないので、楽譜を見て選んでください。</li>
-        <li>曲の途中の臨時記号（♯・♭・♮）、休符、タイ、装飾音は読み取りません。カードの編集画面で直せます。</li>
-        <li>リズムは小節の中の音符の間隔から推定しています。試聴してずれていたら、カードの編集画面で直してください。</li>
+        <li><b>拍子</b>は楽譜を見て選んでください。調号と臨時記号（♯・♭・♮）は自動で読み取ります（途中の転調にも対応）。うまく読めないときは調号を手動で選んでください。</li>
+        <li>音の長さは、符頭の塗り・符幹・連桁（旗）・付点から読み取ります。休符（4分・8分・16分・2分・全）も読み取り、読めなかった休符は音符の間隔から推定します。ト音記号・ヘ音記号の切り替えにも対応しています。タイ・装飾音・3連符・反復記号には対応していません（装飾音はなるべく無視します）。</li>
+        <li>試聴してずれていたら、カードの編集画面で直してください。</li>
       </ol>
     </div>
   </section>
@@ -283,7 +285,7 @@ code{background:#f1e9e4;padding:1px 5px;border-radius:5px;font-size:13px}
     </div>
     <div class="box muted" style="font-size:12px">
       20弁：ド〜ラ（白鍵のみ）／カード幅70mm／弁の間隔3.0mm／四分音符7.5mm／穴径2mm<br>
-      オルガニート カード工房 v1.1 — 個人利用専用
+      オルガニート カード工房 v1.4 — 個人利用専用
     </div>
   </section>
 </main>
@@ -335,6 +337,33 @@ code{background:#f1e9e4;padding:1px 5px;border-radius:5px;font-size:13px}
   </div>
 </div>
 
+<!-- ダイジェスト -->
+<div class="modal" id="digDlg">
+  <div class="sheet">
+    <h2>✂️ ダイジェスト版を作る</h2>
+    <p class="muted" style="margin-top:0">曲を数小節ずつの「フレーズ」に分け、繰り返しを省いたうえで、始まり・一番よく出てくる部分（サビ）・終わりを優先して残します。元の曲はそのまま残ります。</p>
+    <div class="row">
+      <div class="grow"><label class="f">目標の長さ</label>
+        <select id="dgTarget"><option value="534">534mm（市販カード1枚）</option><option value="1000" selected>1000mm（約1m）</option><option value="1500">1500mm</option><option value="2000">2000mm</option></select></div>
+      <div class="grow"><label class="f">フレーズの単位</label>
+        <select id="dgPhrase"><option value="2">2小節</option><option value="4" selected>4小節（おすすめ）</option><option value="8">8小節</option></select></div>
+    </div>
+    <div class="row">
+      <div class="grow"><label class="f">繰り返し</label>
+        <select id="dgRepeat"><option value="1">同じフレーズの繰り返しを省く</option><option value="0">省かない</option></select></div>
+      <div class="grow"><label class="f">穴の間隔</label>
+        <select id="dgScale"><option value="1">そのまま</option><option value="0.85">85%に詰める</option><option value="0.7">70%に詰める</option></select></div>
+    </div>
+    <div class="stats" id="dgStats"></div>
+    <div id="dgMsg" class="muted" style="font-size:13px"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn ghost grow" onclick="closeDigest()">キャンセル</button>
+      <button class="btn sub grow" onclick="previewDigest()">▶ 試聴</button>
+      <button class="btn grow" onclick="commitDigest()">作成する</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -349,7 +378,7 @@ const CARDW = 70, HOLE_R = 1.0, LEAD = 30, TAIL = 20, JOIN_SAFE = 10;
 const DEF = {beatMm:7.5, pitchMm:3.0, marginMm:6.5, warnMm:3.75, snap:2};
 let S = Object.assign({}, DEF);
 try { Object.assign(S, JSON.parse(localStorage.getItem('oc_settings')||'{}')); } catch(e){}
-const gridMm = () => S.beatMm / TPQ;
+const gridMm = song => ((song && song.beatMm) || S.beatMm) / TPQ;
 const laneX = i => S.marginMm + i * S.pitchMm;
 const laneMidi = i => P0 + Math.floor(i/7)*12 + WHITE[i%7];
 const laneName = i => KANA[i%7];
@@ -584,13 +613,13 @@ function musicTicks(song){
   const need = song.notes.length ? lastTick(song) + TPQ : bar*4;
   return Math.max(bar*4, Math.ceil(need/bar)*bar + (song.extraBars||0)*bar);
 }
-function cardLen(song){ return LEAD + musicTicks(song)*gridMm() + TAIL; }
-function noteY(t){ return LEAD + t*gridMm(); }
+function cardLen(song){ return LEAD + musicTicks(song)*gridMm(song) + TAIL; }
+function noteY(t, song){ return LEAD + t*gridMm(song); }
 function warnSet(song){
   const last = {}, w = new Set();
   const sorted = [...song.notes].sort((a,b)=>a[0]-b[0]);
   for(const [t,l] of sorted){
-    if(last[l] !== undefined && (t-last[l])*gridMm() < S.warnMm - 1e-6) w.add(t+','+l);
+    if(last[l] !== undefined && (t-last[l])*gridMm(song) < S.warnMm - 1e-6) w.add(t+','+l);
     last[l] = t;
   }
   return w;
@@ -599,7 +628,7 @@ function warnSet(song){
 /* ================= 描画（SVG/PDF共通の命令列） ================= */
 // ops: {t:'line',x1,y1,x2,y2,w,c,dash} {t:'circle',x,y,r,fill,stroke,w,dash} {t:'rect',x,y,w,h,stroke,sw,fill} {t:'text',x,y,h,s,c,anchor,bold}
 function drawStrip(ops, song, x0, y0, s, e, opt){
-  const total = cardLen(song), mEnd = LEAD + musicTicks(song)*gridMm();
+  const total = cardLen(song), mEnd = LEAD + musicTicks(song)*gridMm(song);
   const Y = y => y0 + (y - s);
   const lanesL = x0 + laneX(0) - S.pitchMm*0.5, lanesR = x0 + laneX(LANES-1) + S.pitchMm*0.5;
   // 外枠（切り取り線）
@@ -613,15 +642,15 @@ function drawStrip(ops, song, x0, y0, s, e, opt){
       ops.push({t:'line', x1:x, y1:Y(a), x2:x, y2:Y(b), w: i===MIDC ? 0.35 : 0.12, c: i===MIDC ? '#222' : '#666'});
     }
     // 拍・小節の線
-    const g = gridMm(), bar = TPQ*(song.beats||4), mt = musicTicks(song);
+    const g = gridMm(song), bar = TPQ*(song.beats||4), mt = musicTicks(song);
     for(let t=0; t<=mt; t+=TPQ/2){
-      const y = noteY(t); if(y < a-1e-6 || y > b+1e-6) continue;
+      const y = noteY(t, song); if(y < a-1e-6 || y > b+1e-6) continue;
       if(t % bar === 0) ops.push({t:'line', x1:lanesL, y1:Y(y), x2:lanesR, y2:Y(y), w:0.35, c:'#333'});
       else if(t % TPQ === 0) ops.push({t:'line', x1:lanesL, y1:Y(y), x2:lanesR, y2:Y(y), w:0.12, c:'#777'});
       else for(let i=0;i<LANES;i++){ const x=x0+laneX(i); ops.push({t:'line', x1:x-0.6, y1:Y(y), x2:x+0.6, y2:Y(y), w:0.1, c:'#999'}); }
     }
     // 小節番号
-    for(let t=0, n=1; t<mt; t+=bar, n++){ const y=noteY(t); if(y>=a && y<b) ops.push({t:'text', x:x0+1.2, y:Y(y)+2.2, h:1.8, s:String(n), c:'#999'}); }
+    for(let t=0, n=1; t<mt; t+=bar, n++){ const y=noteY(t, song); if(y>=a && y<b) ops.push({t:'text', x:x0+1.2, y:Y(y)+2.2, h:1.8, s:String(n), c:'#999'}); }
   }
   // 見出し（先頭）
   if(s < LEAD){
@@ -643,7 +672,7 @@ function drawStrip(ops, song, x0, y0, s, e, opt){
   // 穴
   const ws = warnSet(song);
   for(const [t,l] of song.notes){
-    const y = noteY(t); if(y < s-1e-6 || y > e+1e-6) continue;
+    const y = noteY(t, song); if(y < s-1e-6 || y > e+1e-6) continue;
     const x = x0 + laneX(l), yy = Y(y);
     const nearJoin = opt.joins && ((s > 0 && y - s < JOIN_SAFE) || (e < total && e - y < JOIN_SAFE));
     if(ws.has(t+','+l)) ops.push({t:'circle', x, y:yy, r:HOLE_R+0.7, fill:'none', stroke:'#e74c3c', w:0.45});
@@ -683,7 +712,7 @@ function renderEditor(){
   drawStrip(ops, cur, 0, 0, 0, L, {joins:false, holeStyle:'fill'});
   el.innerHTML = opsToSvg(ops, CARDW, L, z, 'id="edSvg"');
   const ws = warnSet(cur), bars = musicTicks(cur)/(TPQ*(cur.beats||4));
-  $('edStats').innerHTML = `穴 ${cur.notes.length}個 ／ ${bars}小節（${cur.beats||4}拍子） ／ 長さ ${Math.round(L)}mm（市販カード約${(L/534).toFixed(1)}枚分）` + (ws.size ? ` ／ <span class="err">連打注意 ${ws.size}か所</span>` : '');
+  $('edStats').innerHTML = `穴 ${cur.notes.length}個 ／ ${bars}小節（${cur.beats||4}拍子） ／ 長さ ${Math.round(L)}mm（市販カード約${(L/534).toFixed(1)}枚分）` + (cur.beatMm && cur.beatMm !== S.beatMm ? ` ／ <span class="warn">間隔${Math.round(cur.beatMm/S.beatMm*100)}%（その分ゆっくり回す）</span>` : '') + (ws.size ? ` ／ <span class="err">連打注意 ${ws.size}か所</span>` : '');
   $('edSvg').addEventListener('click', onEdTap);
 }
 function onEdTap(ev){
@@ -691,8 +720,8 @@ function onEdTap(ev){
   const mmx = (ev.clientX - r.left) / r.width * CARDW, mmy = (ev.clientY - r.top) / r.height * cardLen(cur);
   const lane = Math.round((mmx - S.marginMm) / S.pitchMm);
   if(lane < 0 || lane >= LANES || Math.abs(mmx - laneX(lane)) > S.pitchMm*0.55) return;
-  if(mmy < LEAD - gridMm()) return;
-  const snap = +S.snap, t = Math.round((mmy - LEAD) / gridMm() / snap) * snap;
+  if(mmy < LEAD - gridMm(cur)) return;
+  const snap = +S.snap, t = Math.round((mmy - LEAD) / gridMm(cur) / snap) * snap;
   if(t < 0 || t >= musicTicks(cur)) return;
   pushUndo();
   const i = cur.notes.findIndex(n => n[0]===t && n[1]===lane);
@@ -715,7 +744,7 @@ async function saveSong(){
   if(!cur) return;
   if(!cryptoKey) return toast('ロックを解除してください');
   cur.title = $('edTitle').value.trim() || '無題';
-  const rec = {id: cur.id || uid(), title:cur.title, beats:cur.beats||4, bpm:cur.bpm||90, notes:cur.notes, extraBars:cur.extraBars||0, src:cur.src||null, opts:cur.opts||null, updated:Date.now()};
+  const rec = {id: cur.id || uid(), title:cur.title, beats:cur.beats||4, bpm:cur.bpm||90, notes:cur.notes, extraBars:cur.extraBars||0, beatMm:cur.beatMm||null, src:cur.src||null, opts:cur.opts||null, updated:Date.now()};
   const i = vault.songs.findIndex(s => s.id === rec.id);
   if(i >= 0) vault.songs[i] = rec; else vault.songs.unshift(rec);
   cur.id = rec.id; cur.dirty = false;
@@ -831,12 +860,103 @@ impSource = function(){ return imp.kind === 're' ? imp.fixed : _impSource(); };
 const _commit = commitImp;
 commitImp = function(){ const id = imp && imp.kind==='re' ? imp._cid : null; _commit(); if(id) cur.id = id; };
 
+
+/* ================= ダイジェスト ================= */
+function digestSong(song, o){
+  const B = TPQ*(song.beats||4), P = o.phraseBars*B;
+  const last = lastTick(song), nPh = Math.floor(last/P) + 1;
+  const phr = Array.from({length:nPh}, () => new Set());
+  for(const [t,l] of song.notes) phr[Math.floor(t/P)].add((t%P) + ':' + l);
+  const sim = (a,b) => { if(!a.size && !b.size) return 1; let i = 0; for(const x of a) if(b.has(x)) i++; return i/(a.size + b.size - i); };
+  const TH = 0.75;
+  const rep = phr.map(a => phr.reduce((c,b) => c + (sim(a,b) >= TH ? 1 : 0), 0));
+  const nonEmpty = phr.map((_,i)=>i).filter(i => phr[i].size);
+  // 1) 繰り返しを省く（最後のフレーズは終わりとして必ず残す）
+  let kept = [];
+  for(const i of nonEmpty){
+    if(o.removeRepeats && i !== nonEmpty[nonEmpty.length-1] && kept.some(j => sim(phr[i], phr[j]) >= TH)) continue;
+    kept.push(i);
+  }
+  // 2) 目標の長さに収める
+  const g = gridMm(song) * o.scale;
+  const K = Math.max(1, Math.floor((o.targetMm - LEAD - TAIL - B*g) / (P*g) + 1e-6));
+  let sel = kept;
+  if(kept.length > K){
+    const maxD = Math.max(...kept.map(i => phr[i].size));
+    const first = kept[0], lastK = kept[kept.length-1];
+    const score = i => rep[i]*2 + phr[i].size/maxD;
+    if(K === 1) sel = [kept.slice().sort((a,b)=>score(b)-score(a))[0]];
+    else {
+      const fixed = K <= 4 ? [lastK] : [first, lastK];   // 短いときは前奏より中身（サビ）を優先
+      const rest = kept.filter(i => !fixed.includes(i)).sort((a,b) => score(b)-score(a));
+      const chosen = new Set(fixed);
+      const partner = i => { const nx = kept[kept.indexOf(i)+1]; return nx === i+1 && nx !== lastK ? nx : undefined; };
+      // 1周目：連続するフレーズ（例：サビの前半と後半）は対で入れる。1枠しかないときは途中で切れるので見送る
+      for(const i of rest){
+        if(chosen.size >= K) break; if(chosen.has(i)) continue;
+        const nx = partner(i);
+        if(nx !== undefined && !chosen.has(nx)){ if(chosen.size + 2 <= K){ chosen.add(i); chosen.add(nx); } continue; }
+        if(kept.includes(i-1) && !chosen.has(i-1)) continue; // 後半だけ残すのは避ける（前半と対で入る）
+        chosen.add(i);
+      }
+      // 2周目：まだ空きがあれば点数の高い順に埋める
+      for(const i of rest){ if(chosen.size >= K) break; if(chosen.has(i)) continue;
+        const prevOk = !kept.includes(i-1) || chosen.has(i-1);           // 前半が入っていない後半だけ、は避ける
+        const nx = partner(i); if(prevOk && (nx === undefined || chosen.has(nx))) chosen.add(i); }
+      // 3周目：中身がほとんど入っていなければ、点数順に必ず入れる
+      for(const i of rest){ if(chosen.size >= Math.min(K, fixed.length + 2)) break; chosen.add(i); }
+      sel = [...chosen].sort((a,b)=>a-b);
+    }
+  }
+  const notes = [];
+  sel.forEach((i, k) => { for(const [t,l] of song.notes) if(Math.floor(t/P) === i) notes.push([t - i*P + k*P, l]); });
+  const bm = ((song.beatMm || S.beatMm) * o.scale);
+  const out = {id:null, title:(song.title||'無題') + '（ダイジェスト）', beats:song.beats||4, bpm:song.bpm||90, notes, extraBars:0, beatMm: Math.abs(bm - S.beatMm) < 1e-6 ? null : bm, dirty:true};
+  const bars = i => `${i*o.phraseBars+1}〜${(i+1)*o.phraseBars}`;
+  return {song: out, info:{nPh: nonEmpty.length, kept: kept.length, sel, ranges: sel.map(bars)}};
+}
+let dig = null;
+function digOpts(){ return {targetMm:+$('dgTarget').value, phraseBars:+$('dgPhrase').value, removeRepeats: $('dgRepeat').value === '1', scale:+$('dgScale').value}; }
+function openDigest(){
+  if(!cur || !cur.notes.length) return toast('穴がありません');
+  $('digDlg').classList.add('on'); updDigest();
+}
+function closeDigest(){ $('digDlg').classList.remove('on'); stopPlay(); }
+function updDigest(){
+  dig = digestSong(cur, digOpts());
+  const L0 = cardLen(cur), L1 = cardLen(dig.song), ws = warnSet(dig.song);
+  $('dgStats').innerHTML = `
+    <div class="stat"><b>${Math.round(L0)}<small>mm</small></b><small>元の長さ</small></div>
+    <div class="stat"><b>${Math.round(L1)}<small>mm</small></b><small>ダイジェスト</small></div>
+    <div class="stat"><b class="${ws.size?'err':''}">${ws.size}</b><small>連打注意</small></div>`;
+  $('dgMsg').innerHTML = `フレーズ ${dig.info.nPh}個 → 繰り返しを省いて ${dig.info.kept}個 → <b>${dig.info.sel.length}個</b>を使用。<br>使う小節：${dig.info.ranges.join('、')}` +
+    (L1 > +$('dgTarget').value + 5 ? '<br><span class="warn">目標より長くなっています。フレーズの単位を小さくするか、間隔を詰めてください。</span>' : '') +
+    (+$('dgScale').value < 1 ? '<br><span class="warn">間隔を詰めた分、ハンドルをゆっくり回すと元のテンポになります。</span>' : '');
+}
+['dgTarget','dgPhrase','dgRepeat','dgScale'].forEach(id => $(id).onchange = updDigest);
+function previewDigest(){ if(dig) playNotes(dig.song.notes, +$('bpm').value || 90); }
+function commitDigest(){ if(!dig) return; const sg = dig.song; closeDigest(); setCur(sg); toast('ダイジェスト版を作りました。保存を忘れずに'); }
+
 /* ================= 試聴（オルゴール風の音） ================= */
-let actx = null, playing = null;
-function ac(){ if(!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); if(actx.state==='suspended') actx.resume(); return actx; }
+let actx = null, master = null, playing = null, unlocked = false;
+// iPhoneのマナーモード（消音スイッチ）でもWeb Audioが鳴るようにする
+const SILENT_WAV = 'data:audio/wav;base64,UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YSADAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==';
+function unlockAudio(){
+  if(unlocked) return; unlocked = true;
+  try { if(navigator.audioSession) navigator.audioSession.type = 'playback'; } catch(e){}
+  try { const a = new Audio(SILENT_WAV); a.loop = true; a.setAttribute('playsinline',''); a.play().catch(()=>{ unlocked = false; }); window._silentAudio = a; } catch(e){}
+}
+function ac(){
+  unlockAudio();
+  if(!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+  if(actx.state !== 'running') actx.resume();
+  if(!master){ master = actx.createGain(); master.gain.value = 1; master.connect(actx.destination); }
+  return actx;
+}
+document.addEventListener('visibilitychange', () => { if(!document.hidden && actx && actx.state !== 'running') actx.resume().catch(()=>{}); });
 function tone(midi, when, ctx){
   const f = 440 * Math.pow(2, (midi + 12 - 69)/12); // 実機に近い1オクターブ上で鳴らす
-  const g = ctx.createGain(); g.connect(ctx.destination);
+  const g = ctx.createGain(); g.connect(master || ctx.destination);
   g.gain.setValueAtTime(0.0001, when); g.gain.exponentialRampToValueAtTime(0.22, when+0.004); g.gain.exponentialRampToValueAtTime(0.0001, when+1.6);
   [[1,1],[2.76,0.25],[5.4,0.08]].forEach(([m,a]) => { const o = ctx.createOscillator(), gg = ctx.createGain(); o.type='sine'; o.frequency.value = f*m; gg.gain.value = a; o.connect(gg); gg.connect(g); o.start(when); o.stop(when+1.7); });
 }
@@ -855,7 +975,7 @@ function playNotes(notes, bpm, onEnd){
   playing = {timer, t0, sp, onEnd};
   if(cur && notes === cur.notes) followPlayhead();
 }
-function stopPlay(){ if(playing){ clearInterval(playing.timer); const cb = playing.onEnd; playing = null; if(actx){ actx.close(); actx = null; } if(cb) cb(); } $('playBtn').textContent = '▶ 試聴'; const ph = document.getElementById('ph'); if(ph) ph.remove(); }
+function stopPlay(){ if(playing){ clearInterval(playing.timer); const cb = playing.onEnd; playing = null; if(master){ try{ master.disconnect(); }catch(e){} master = null; } if(cb) cb(); } $('playBtn').textContent = '▶ 試聴'; const ph = document.getElementById('ph'); if(ph) ph.remove(); }
 function togglePlay(){ if(playing) return stopPlay(); if(!cur || !cur.notes.length) return toast('穴がありません'); playNotes(cur.notes, +$('bpm').value); $('playBtn').textContent = '■ 停止'; }
 function followPlayhead(){
   const svg = $('edSvg'); if(!svg) return;
@@ -864,7 +984,7 @@ function followPlayhead(){
   const wrap = $('editorWrap'), z = +$('zoom').value;
   const step = () => {
     if(!playing || !actx) return;
-    const tick = (actx.currentTime - playing.t0) / playing.sp, y = noteY(Math.max(0,tick));
+    const tick = (actx.currentTime - playing.t0) / playing.sp, y = noteY(Math.max(0,tick), cur);
     ln.setAttribute('y1', y); ln.setAttribute('y2', y);
     wrap.scrollTop = y*z - wrap.clientHeight*0.35;
     requestAnimationFrame(step);
@@ -880,7 +1000,7 @@ function layoutPages(song, paperKey){
   const segMax = P.h - TOP - M - 4;
   const cols = Math.floor((P.w - 2*M + GAP) / (CARDW + GAP));
   const total = cardLen(song);
-  const ys = song.notes.map(n => noteY(n[0]));
+  const ys = song.notes.map(n => noteY(n[0], song));
   const segs = []; let s = 0;
   while(s < total - 0.01){
     let e = Math.min(total, s + segMax);
