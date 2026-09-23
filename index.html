@@ -96,7 +96,7 @@ code{background:#f1e9e4;padding:1px 5px;border-radius:5px;font-size:13px}
 </div>
 
 <header>
-  <h1>🎼 オルガニート カード工房 <small style="font-size:11px;opacity:.7;font-weight:400">v1.5</small></h1>
+  <h1>🎼 オルガニート カード工房 <small style="font-size:11px;opacity:.7;font-weight:400">v1.6</small></h1>
   <button onclick="lockNow()">🔒</button>
   <button onclick="updateApp()">🔄 更新</button>
 </header>
@@ -221,8 +221,19 @@ code{background:#f1e9e4;padding:1px 5px;border-radius:5px;font-size:13px}
     <div class="box" id="scResult" style="display:none;padding:10px">
       <div class="stats" id="scStats"></div>
       <div class="toolbar">
-        <button class="btn scModeBtn" data-m="note" onclick="scanSetMode('note')">● 音符を追加・削除</button>
-        <button class="btn sub scModeBtn" data-m="bar" onclick="scanSetMode('bar')">｜ 小節線を追加・削除</button>
+        <button class="btn scModeBtn" data-m="note" onclick="scanSetMode('note')">● 音符</button>
+        <button class="btn sub scModeBtn" data-m="move" onclick="scanSetMode('move')">✋ 動かす</button>
+        <button class="btn sub scModeBtn" data-m="acc" onclick="scanSetMode('acc')">♯♭♮</button>
+        <button class="btn sub scModeBtn" data-m="rest" onclick="scanSetMode('rest')">𝄽 休符</button>
+        <button class="btn sub scModeBtn" data-m="dur" onclick="scanSetMode('dur')">♪ 長さ</button>
+        <button class="btn sub scModeBtn" data-m="key" onclick="scanSetMode('key')">調号</button>
+        <button class="btn sub scModeBtn" data-m="bar" onclick="scanSetMode('bar')">｜ 小節線</button>
+        <button class="btn sub scModeBtn" data-m="del" onclick="scanSetMode('del')">🗑 消す</button>
+        <button class="btn ghost" onclick="scanUndo()">↶ 戻す</button>
+      </div>
+      <div id="scOpt" class="toolbar" style="align-items:center"></div>
+      <div id="scHelp" class="muted" style="font-size:12px;margin:-2px 0 8px"></div>
+      <div style="display:none">
       </div>
       <div class="row" style="justify-content:space-between;margin-bottom:6px">
         <button class="btn ghost" onclick="scanPage(-1)">◀</button><b id="scPageNo"></b><button class="btn ghost" onclick="scanPage(1)">▶</button>
@@ -290,7 +301,7 @@ code{background:#f1e9e4;padding:1px 5px;border-radius:5px;font-size:13px}
     </div>
     <div class="box muted" style="font-size:12px">
       20弁：ド〜ラ（白鍵のみ）／カード幅70mm／弁の間隔3.0mm／四分音符7.5mm／穴径2mm<br>
-      オルガニート カード工房 v1.5 — 個人利用専用
+      オルガニート カード工房 v1.6 — 個人利用専用
     </div>
   </section>
 </main>
@@ -1150,7 +1161,7 @@ function audioTest(){
   try{
     const c = ac(); const t = c.currentTime + 0.1;
     [60,62,64,65,67].forEach((m,i) => tone(m, t + i*0.25, c));
-    setTimeout(() => { $('audioInfo').textContent = `状態: ${actx ? actx.state : 'なし'} ／ ${navigator.audioSession ? 'audioSession対応' : 'audioSession非対応'} ／ v1.5`; }, 400);
+    setTimeout(() => { $('audioInfo').textContent = `状態: ${actx ? actx.state : 'なし'} ／ ${navigator.audioSession ? 'audioSession対応' : 'audioSession非対応'} ／ v1.6`; }, 400);
   } catch(e){ $('audioInfo').textContent = 'エラー: ' + e.message; }
 }
 function updateApp() {

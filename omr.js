@@ -687,6 +687,7 @@ async function scanRun(){
     const nst = SCAN.pages.reduce((a,p)=>a+p.staves.length,0);
     prog(nst ? '解析が終わりました。赤＝右手（ト音）、青＝左手（ヘ音）、緑＝小節線です。違うところをタップで直してください。' : '五線が見つかりませんでした。スキャンの解像度を上げるか、まっすぐに撮り直してください。');
     $('scResult').style.display = nst ? '' : 'none';
+    SCAN.undo = []; SCAN.mode = 'note'; scanOptUI();
     scanRender();
   } catch(e){ prog(''); alert('解析できませんでした：' + e.message); }
   finally { $('scRun').disabled = false; }
@@ -701,6 +702,7 @@ function scanRecalc(){
 }
 const KEYNAME = k => k === 0 ? 'なし' : (k > 0 ? '♯' : '♭') + Math.abs(k);
 const RESTNAME = {4:'全休', 2:'2分休', 1:'4分休', 0.5:'8分休', 0.25:'16分休'};
+const DURNAME = {4:'全', 3:'付2', 2:'2分', 1.5:'付4', 1:'4分', 0.75:'付8', 0.5:'8分', 0.375:'付16', 0.25:'16分', 0.125:'32分'};
 function scanRender(){
   scanRecalc();
   const pg = SCAN.pages[SCAN.cur]; if(!pg) return;
@@ -721,47 +723,160 @@ function scanRender(){
     const col = a.used ? '#ae3ec9' : '#7048e8', s = pg.staves[a.staff].s;
     svg += `<rect x="${a.x0 - 2}" y="${a.y0 - 2}" width="${a.x1 - a.x0 + 4}" height="${a.y1 - a.y0 + 4}" fill="${col}" fill-opacity=".12" stroke="${col}" stroke-width="${s*0.12}"/>`;
   }
-  for(const r of (pg.rests || [])){ const st = pg.staves[r.staff];
-    svg += `<rect x="${r.x - st.s*0.7}" y="${r.y - st.s*0.9}" width="${st.s*1.4}" height="${st.s*1.8}" fill="#f08c00" fill-opacity=".12" stroke="#f08c00" stroke-width="${st.s*0.15}"/>`;
-    svg += T(r.x, r.y + st.s*2.1, st.s*1.0, '#e8590c', RESTNAME[r.dur] || '休', 'middle'); }
-  for(const h of pg.heads){
+  (pg.rests || []).forEach((r, ri) => { const st = pg.staves[r.staff];
+    svg += `<g data-k="rest${ri}"><rect x="${r.x - st.s*0.7}" y="${r.y - st.s*0.9}" width="${st.s*1.4}" height="${st.s*1.8}" fill="#f08c00" fill-opacity=".12" stroke="#f08c00" stroke-width="${st.s*0.15}"/>`;
+    svg += T(r.x, r.y + st.s*2.1, st.s*1.0, '#e8590c', RESTNAME[r.dur] || '休', 'middle') + '</g>'; });
+  pg.heads.forEach((h, hi) => {
     const st = pg.staves[h.staff], clef = OMR.clefOf(pg, h.staff, o.mode, h.x), sy = pg.systems.find(y => y.staff.includes(h.staff)), lower = sy && sy.staff.length === 2 ? sy.staff[1] === h.staff : clef === 'F', col = lower ? '#1971c2' : '#e03131';
-    svg += `<circle cx="${h.x}" cy="${h.y}" r="${st.s*0.62}" fill="none" stroke="${col}" stroke-width="${st.s*0.16}"/>`;
+    svg += `<g data-k="head${hi}"><circle cx="${h.x}" cy="${h.y}" r="${st.s*0.62}" fill="${h.manual ? col : 'none'}" fill-opacity=".25" stroke="${col}" stroke-width="${st.s*0.16}"/>`;
     const nm = h._name || OMR.nameOf(h.step, clef, acc);
-    svg += T(h.x + st.s*0.7, h.y - st.s*0.55, st.s*1.25, /[♯♭]/.test(nm) ? '#ae3ec9' : col, nm);
-  }
+    svg += T(h.x + st.s*0.7, h.y - st.s*0.55, st.s*1.25, /[♯♭]/.test(nm) || h.acc === 0 ? '#ae3ec9' : col, nm + (h.acc === 0 ? '♮' : ''));
+    if(SCAN.mode === 'dur') svg += T(h.x, h.y + st.s*1.9, st.s*0.95, '#495057', DURNAME[h.dur] || '?', 'middle');
+    svg += '</g>';
+  });
   svg += '</svg>';
   $('scView').innerHTML = `<img src="${pg.url}" style="display:block;width:100%;height:auto">` + svg;
-  $('scSvg').addEventListener('click', scanTap);
+  const sv = $('scSvg');
+  sv.addEventListener('click', scanTap);
+  sv.addEventListener('pointerdown', scanDown); sv.addEventListener('pointermove', scanMoveEv); sv.addEventListener('pointerup', scanUp); sv.addEventListener('pointercancel', scanUp);
+  sv.style.touchAction = SCAN.mode === 'move' ? 'none' : 'auto';
   document.querySelectorAll('.scModeBtn').forEach(b => b.classList.toggle('sub', b.dataset.m !== SCAN.mode));
 }
+/* ---------- 手で直す道具 ---------- */
+SCAN.opt = {acc:'#', rest:1, dur:0.5, key:0};
+SCAN.undo = [];
+const MODE_HELP = {
+  note:'何もない所をタップ＝音符を追加（高さは五線に合わせます）／音符をタップ＝削除',
+  move:'音符や休符を指でつかんで動かします（上下で音の高さ、左右で位置）',
+  acc:'選んだ記号を付けたい音符をタップ。同じ記号をもう一度タップすると外れます（その小節の同じ高さの音にも効きます）',
+  rest:'休符を置きたい位置をタップ／休符をタップ＝削除',
+  dur:'音符をタップすると、選んだ長さに変わります（和音は同じ符幹の音もまとめて）',
+  key:'段の頭（または途中の小節線の後ろ）をタップ＝そこからの調号を設定。上下の段に同時に設定します',
+  bar:'何もない所をタップ＝小節線を追加／小節線をタップ＝削除',
+  del:'音符・休符・♯♭・小節線・調号のラベルをタップして消します'
+};
+function scanOptUI(){
+  const m = SCAN.mode, o = SCAN.opt, chip = (on, label, js) => `<button class="btn ${on ? '' : 'ghost'}" style="min-height:36px;padding:6px 10px" onclick="${js}">${label}</button>`;
+  let h = '';
+  if(m === 'acc') h = [['#','♯ シャープ'],['b','♭ フラット'],['n','♮ ナチュラル']].map(([v,l]) => chip(o.acc===v, l, `SCAN.opt.acc='${v}';scanOptUI()`)).join('');
+  if(m === 'rest') h = [[4,'全休符'],[2,'2分'],[1,'4分'],[0.5,'8分'],[0.25,'16分']].map(([v,l]) => chip(o.rest===v, l, `SCAN.opt.rest=${v};scanOptUI()`)).join('');
+  if(m === 'dur') h = [[4,'全'],[3,'付点2分'],[2,'2分'],[1.5,'付点4分'],[1,'4分'],[0.75,'付点8分'],[0.5,'8分'],[0.25,'16分'],[0.125,'32分']].map(([v,l]) => chip(o.dur===v, l, `SCAN.opt.dur=${v};scanOptUI()`)).join('');
+  if(m === 'key') h = `<select style="width:auto" onchange="SCAN.opt.key=+this.value">${[0,1,2,3,4,5,6,7,-1,-2,-3,-4,-5,-6,-7].map(k => `<option value="${k}" ${o.key===k?'selected':''}>${KEYNAME(k)}</option>`).join('')}</select>`;
+  $('scOpt').innerHTML = h; $('scOpt').style.display = h ? '' : 'none';
+  $('scHelp').textContent = MODE_HELP[m] || '';
+}
+function scanSnap(){ const pg = SCAN.pages[SCAN.cur]; SCAN.undo.push({pi:SCAN.cur, d:JSON.stringify({heads:pg.heads, rests:pg.rests||[], bars:pg.systems.map(y=>y.bars), keyEv:pg.keyEv||[], accs:pg.accs||[]})}); if(SCAN.undo.length > 80) SCAN.undo.shift(); }
+function scanUndo(){
+  const u = SCAN.undo.pop(); if(!u) return toast('これ以上戻せません');
+  const pg = SCAN.pages[u.pi], d = JSON.parse(u.d);
+  pg.heads = d.heads; pg.rests = d.rests; pg.systems.forEach((y,i) => y.bars = d.bars[i]); pg.keyEv = d.keyEv; pg.accs = d.accs;
+  SCAN.cur = u.pi; scanRender();
+}
+function scanPt(ev){ const pg = SCAN.pages[SCAN.cur], r = $('scSvg').getBoundingClientRect(); return {pg, x:(ev.clientX - r.left) / r.width * pg.W, y:(ev.clientY - r.top) / r.height * pg.H}; }
+function nearestStaff(pg, y){ let bi = -1, bd = 1e9; pg.staves.forEach((st,i) => { const d = Math.abs(y - (st.top+st.bot)/2); if(y > st.top - 5*st.s && y < st.bot + 5*st.s && d < bd){ bd = d; bi = i; } }); return bi; }
+function nearestItem(pg, x, y, kinds){
+  let best = null;
+  const consider = (kind, i, ix, iy, s, lim) => { const d = Math.hypot(ix-x, iy-y); if(d < s*lim && (!best || d < best.d)) best = {kind, i, d}; };
+  if(kinds.includes('head')) pg.heads.forEach((h,i) => consider('head', i, h.x, h.y, pg.staves[h.staff].s, 0.9));
+  if(kinds.includes('rest')) (pg.rests||[]).forEach((r,i) => consider('rest', i, r.x, r.y, pg.staves[r.staff].s, 1.1));
+  if(kinds.includes('acc')) (pg.accs||[]).forEach((a,i) => { if(a.used || a.manual) consider('acc', i, (a.x0+a.x1)/2, (a.y0+a.y1)/2, pg.staves[a.staff].s, 1.2); });
+  if(kinds.includes('key')) (pg.keyEv||[]).forEach((evs, si) => evs.forEach((e,i) => { const st = pg.staves[si]; consider('key', [si,i], Math.max(e.x0, st.x0), st.top - st.s*1.3, st.s, 2.5); }));
+  return best;
+}
 function scanTap(ev){
-  const pg = SCAN.pages[SCAN.cur], r = ev.currentTarget.getBoundingClientRect();
-  const x = (ev.clientX - r.left) / r.width * pg.W, y = (ev.clientY - r.top) / r.height * pg.H;
-  if(SCAN.mode === 'note'){
-    const near = pg.heads.map((h,i) => ({i, d: Math.hypot(h.x-x, h.y-y), s: pg.staves[h.staff].s})).sort((a,b)=>a.d-b.d)[0];
-    const nearR = (pg.rests || []).map((r,i) => ({i, d: Math.hypot(r.x-x, r.y-y), s: pg.staves[r.staff].s})).sort((a,b)=>a.d-b.d)[0];
-    if(nearR && nearR.d < nearR.s*0.9 && (!near || nearR.d < near.d)){ pg.rests.splice(nearR.i, 1); }
-    else if(near && near.d < near.s*0.8){ pg.heads.splice(near.i, 1); }
+  if(SCAN.mode === 'move') return;
+  const {pg, x, y} = scanPt(ev), m = SCAN.mode;
+  if(m === 'note'){
+    const it = nearestItem(pg, x, y, ['head']);
+    scanSnap();
+    if(it){ pg.heads.splice(it.i, 1); }
     else {
-      let bi = -1, bd = 1e9;
-      pg.staves.forEach((st,i) => { const d = Math.abs(y - (st.top+st.bot)/2); if(y > st.top - 5*st.s && y < st.bot + 5*st.s && d < bd){ bd = d; bi = i; } });
-      if(bi < 0) return toast('五線の近くをタップしてください');
+      const bi = nearestStaff(pg, y); if(bi < 0){ SCAN.undo.pop(); return toast('五線の近くをタップしてください'); }
       const st = pg.staves[bi], step = Math.round((st.bot - y)/(st.s/2));
-      pg.heads.push({x, y: st.bot - step*st.s/2, staff: bi, step, hollow:false, dur:null, stemX:null});
+      pg.heads.push({x, y: st.bot - step*st.s/2, staff: bi, step, hollow:false, dur:null, stemX:null, manual:true});
       SCAN.added = pg.heads[pg.heads.length-1];
     }
-  } else {
+  } else if(m === 'acc'){
+    const it = nearestItem(pg, x, y, ['head']); if(!it) return toast('♯♭♮を付ける音符をタップしてください');
+    scanSnap(); const h = pg.heads[it.i], v = {'#':1, b:-1, n:0}[SCAN.opt.acc];
+    if(h.acc === v){ delete h.acc; toast('記号を外しました'); } else h.acc = v;
+    SCAN.added = h;
+  } else if(m === 'rest'){
+    const it = nearestItem(pg, x, y, ['rest']);
+    scanSnap();
+    if(it) pg.rests.splice(it.i, 1);
+    else { const bi = nearestStaff(pg, y); if(bi < 0){ SCAN.undo.pop(); return toast('五線の近くをタップしてください'); }
+      const st = pg.staves[bi]; pg.rests = pg.rests || []; pg.rests.push({x, y:(st.top+st.bot)/2, staff:bi, dur:SCAN.opt.rest, manual:true}); }
+  } else if(m === 'dur'){
+    const it = nearestItem(pg, x, y, ['head']); if(!it) return toast('長さを変える音符をタップしてください');
+    scanSnap(); const h = pg.heads[it.i], s0 = pg.staves[h.staff].s;
+    for(const o of pg.heads) if(o === h || (h.stemX != null && o.stemX != null && o.staff === h.staff && Math.abs(o.stemX - h.stemX) < 0.25*s0)) { o.dur = SCAN.opt.dur; o.hollow = SCAN.opt.dur >= 2; }
+  } else if(m === 'key'){
+    const bi = nearestStaff(pg, y); if(bi < 0) return toast('五線の近くをタップしてください');
+    scanSnap(); pg.keyEv = pg.keyEv || pg.staves.map(() => []);
+    const sy = pg.systems.find(q => q.staff.includes(bi)), st = pg.staves[bi];
+    for(const si of (sy ? sy.staff : [bi])){
+      const t = pg.staves[si], atStart = x < t.x0 + 12*t.s, evs = pg.keyEv[si] || (pg.keyEv[si] = []);
+      const i = evs.findIndex(e => atStart ? e.atStart : Math.abs(e.x0 - x) < 3*t.s);
+      const ev = {x0: atStart ? t.x0 + 3*t.s : x, x1: atStart ? t.x0 + 3*t.s : x, key: SCAN.opt.key, atStart, manual:true};
+      if(i >= 0) evs[i] = ev; else evs.push(ev);
+      evs.sort((a,b)=>a.x0-b.x0);
+    }
+    toast(`調号を「${KEYNAME(SCAN.opt.key)}」にしました`);
+  } else if(m === 'bar'){
     const sy = pg.systems.find(s => y > s.top - 3*s.s && y < s.bot + 3*s.s);
     if(!sy) return toast('段の中をタップしてください');
-    const i = sy.bars.findIndex(bx => Math.abs(bx - x) < sy.s);
+    scanSnap(); const i = sy.bars.findIndex(bx => Math.abs(bx - x) < sy.s);
     if(i >= 0) sy.bars.splice(i, 1); else sy.bars.push(x);
+  } else if(m === 'del'){
+    const it = nearestItem(pg, x, y, ['head','rest','acc','key']);
+    const sy = pg.systems.find(s => y > s.top - 3*s.s && y < s.bot + 3*s.s), bi = sy ? sy.bars.findIndex(bx => Math.abs(bx - x) < 0.6*sy.s) : -1;
+    if(!it && bi < 0) return;
+    scanSnap();
+    if(it && it.kind === 'head') pg.heads.splice(it.i, 1);
+    else if(it && it.kind === 'rest') pg.rests.splice(it.i, 1);
+    else if(it && it.kind === 'acc'){ const a = pg.accs[it.i]; pg.heads.forEach(h => { if(h._accRef === a) delete h.acc; });
+      // 近くの音符の記号も外す
+      const s0 = pg.staves[a.staff].s; pg.heads.filter(h => h.staff === a.staff && h.x > a.x1 && h.x - a.x1 < 3.2*s0 && Math.abs(h.y - a.py) < 0.5*s0).forEach(h => delete h.acc);
+      pg.accs.splice(it.i, 1); }
+    else if(it && it.kind === 'key'){ const [si, i] = it.i; pg.keyEv[si].splice(i, 1); }
+    else sy.bars.splice(bi, 1);
   }
   scanRender();
   if(SCAN.added){ if(SCAN.added._p) beep(SCAN.added._p - 12); SCAN.added = null; }
 }
+// ドラッグで動かす
+let scDrag = null;
+function scanDown(ev){
+  if(SCAN.mode !== 'move') return;
+  const {pg, x, y} = scanPt(ev), it = nearestItem(pg, x, y, ['head','rest']);
+  if(!it) return;
+  ev.preventDefault(); scanSnap();
+  const obj = it.kind === 'head' ? pg.heads[it.i] : pg.rests[it.i];
+  scDrag = {kind:it.kind, obj, ox:obj.x - x, oy:obj.y - y, el: document.querySelector(`#scSvg [data-k="${it.kind}${it.i}"]`), x0:obj.x, y0:obj.y};
+  try { ev.currentTarget.setPointerCapture(ev.pointerId); } catch(e){}
+}
+function scanMoveEv(ev){
+  if(!scDrag) return; ev.preventDefault();
+  const {pg, x, y} = scanPt(ev), o = scDrag.obj;
+  let nx = x + scDrag.ox, ny = y + scDrag.oy;
+  if(scDrag.kind === 'head'){ const bi = nearestStaff(pg, ny); if(bi >= 0){ const st = pg.staves[bi], step = Math.round((st.bot - ny)/(st.s/2)); ny = st.bot - step*st.s/2; } }
+  if(scDrag.el) scDrag.el.setAttribute('transform', `translate(${nx - scDrag.x0},${ny - scDrag.y0})`);
+  scDrag.nx = nx; scDrag.ny = ny;
+}
+function scanUp(){
+  if(!scDrag) return; const d = scDrag; scDrag = null;
+  if(d.nx === undefined){ SCAN.undo.pop(); return; }
+  const pg = SCAN.pages[SCAN.cur], o = d.obj;
+  o.x = d.nx; o.y = d.ny;
+  const bi = nearestStaff(pg, o.y);
+  if(bi >= 0){ o.staff = bi; const st = pg.staves[bi];
+    if(d.kind === 'head'){ o.step = Math.round((st.bot - o.y)/(st.s/2)); o.stemX = null; } }
+  scanRender();
+  if(d.kind === 'head' && o._p) beep(o._p - 12);
+}
 $('scZoom').oninput = () => { $('scView').style.width = (+$('scZoom').value*100) + '%'; };
-function scanSetMode(m){ SCAN.mode = m; scanRender(); }
+function scanSetMode(m){ SCAN.mode = m; scanOptUI(); scanRender(); }
 function scanPage(d){ const n = SCAN.cur + d; if(n < 0 || n >= SCAN.pages.length) return; SCAN.cur = n; scanRender(); $('scWrap').scrollTop = 0; $('scWrap').scrollLeft = 0; }
 ['scKey','scBeats','scQ'].forEach(id => $(id).onchange = () => { if(SCAN.pages.length) scanRender(); });
 $('scMode').onchange = () => { if(SCAN.pages.length) toast('楽譜の種類を変えたときは「解析する」をもう一度押してください'); };

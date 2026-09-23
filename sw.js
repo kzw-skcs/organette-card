@@ -1,4 +1,4 @@
-const CACHE_NAME = 'organette-card-v7';
+const CACHE_NAME = 'organette-card-v8';
 const CACHE_FILES = [
   './', './index.html', './manifest.json',
   './icon-192.png', './icon-512.png', './icon-180.png', './omr.js',
